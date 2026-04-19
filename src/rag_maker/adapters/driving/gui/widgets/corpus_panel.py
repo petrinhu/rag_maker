@@ -97,9 +97,21 @@ class CorpusPanel(QWidget):
         # ── Progresso (visível só durante operações) ─────────────────────────
         self._progress_bar = QProgressBar()
         self._progress_bar.setVisible(False)
+        self._pause_btn = QPushButton("⏸ Pausar")
+        self._pause_btn.setFixedWidth(100)
+        self._pause_btn.setVisible(False)
+        self._pause_btn.clicked.connect(self._toggle_pause)
+        self._stop_btn = QPushButton("⏹ Parar")
+        self._stop_btn.setFixedWidth(80)
+        self._stop_btn.setVisible(False)
+        self._stop_btn.clicked.connect(self._request_stop)
+        progress_row = QHBoxLayout()
+        progress_row.addWidget(self._progress_bar, stretch=1)
+        progress_row.addWidget(self._pause_btn)
+        progress_row.addWidget(self._stop_btn)
+        root.addLayout(progress_row)
         self._progress_label = QLabel("")
         self._progress_label.setVisible(False)
-        root.addWidget(self._progress_bar)
         root.addWidget(self._progress_label)
 
         # ── Tabela de obras ──────────────────────────────────────────────────
@@ -306,7 +318,11 @@ class CorpusPanel(QWidget):
         self._log_append(f"{'Reconstruindo' if full else 'Ingerindo'} corpus: {corpus}")
         self._ingest_worker = IngestWorker(self._container, corpus, full=full, recursive=self._recursive_chk.isChecked())
         self._ingest_worker.progress.connect(self._on_progress)
+        self._ingest_worker.file_result.connect(self._on_file_result)
         self._ingest_worker.finished.connect(self._on_ingest_done)
+        self._ingest_worker.stopped.connect(self._on_ingest_stopped)
+        self._ingest_worker.paused.connect(self._on_paused)
+        self._ingest_worker.resumed.connect(self._on_resumed)
         self._ingest_worker.error.connect(self._on_ingest_error)
         self._ingest_worker.start()
 
@@ -315,22 +331,52 @@ class CorpusPanel(QWidget):
         self._progress_bar.setValue(current)
         self._progress_label.setText(f"[{current}/{total}] {filename}")
 
+    def _on_file_result(self, filename: str, ok: bool, msg: str) -> None:
+        if ok:
+            self._log_append(f"  ✓ {filename}")
+        else:
+            self._log_append(f"  ✗ {filename}: {msg}")
+
+    def _on_paused(self) -> None:
+        self._pause_btn.setText("▶ Continuar")
+        self._progress_label.setText("Em pausa…")
+
+    def _on_resumed(self) -> None:
+        self._pause_btn.setText("⏸ Pausar")
+
     def _on_ingest_done(self, report: IngestReport) -> None:
         self._set_busy(False)
         self._log_append(
             f"✓ Concluído: +{report.added} adicionados  ~{report.updated} atualizados  "
             f"-{report.removed} removidos  {report.elapsed_ms / 1000:.1f}s"
         )
-        if report.errors:
-            for path, msg in report.errors:
-                self._log_append(f"  ⚠ {Path(path).name}: {msg}")
         self._trigger_scan()
         self.ingest_done.emit(report)
+
+    def _on_ingest_stopped(self, report: IngestReport) -> None:
+        self._set_busy(False)
+        self._log_append(
+            f"⏹ Interrompido: +{report.added} adicionados  ~{report.updated} atualizados  "
+            f"-{report.removed} removidos  {report.elapsed_ms / 1000:.1f}s"
+        )
+        self._trigger_scan()
 
     def _on_ingest_error(self, msg: str) -> None:
         self._set_busy(False)
         self._log_append(f"✗ Erro fatal: {msg}")
         QMessageBox.critical(self, "Erro na ingestão", msg)
+
+    def _toggle_pause(self) -> None:
+        if self._ingest_worker is None:
+            return
+        if self._pause_btn.text().startswith("⏸"):
+            self._ingest_worker.pause()
+        else:
+            self._ingest_worker.resume()
+
+    def _request_stop(self) -> None:
+        if self._ingest_worker:
+            self._ingest_worker.stop()
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -340,8 +386,11 @@ class CorpusPanel(QWidget):
         self._scan_btn.setEnabled(not busy)
         self._progress_bar.setVisible(busy)
         self._progress_label.setVisible(busy)
+        self._pause_btn.setVisible(busy)
+        self._stop_btn.setVisible(busy)
         if not busy:
             self._progress_label.setText("")
+            self._pause_btn.setText("⏸ Pausar")
 
     def _log_append(self, msg: str) -> None:
         self._log.append(msg)

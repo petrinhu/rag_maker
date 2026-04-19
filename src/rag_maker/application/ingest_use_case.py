@@ -15,7 +15,9 @@ from rag_maker.domain.ports.embedder import EmbedderPort
 from rag_maker.domain.ports.loader import LoaderPort
 from rag_maker.domain.ports.vector_store import VectorStorePort
 
-ProgressFn = Callable[[str, int, int], None]  # (filename, current, total)
+ProgressFn      = Callable[[str, int, int], None]   # (filename, current, total)
+FileDoneFn      = Callable[[str, bool, str], None]  # (filename, success, error_msg)
+ShouldContinueFn = Callable[[], bool]
 
 
 @dataclass
@@ -139,6 +141,8 @@ class IngestUseCase:
         self,
         corpus_dir: Path,
         on_progress: ProgressFn | None = None,
+        on_file_done: FileDoneFn | None = None,
+        should_continue: ShouldContinueFn | None = None,
         recursive: bool = True,
     ) -> IngestReport:
         t0 = time.monotonic()
@@ -148,12 +152,16 @@ class IngestUseCase:
         new_set = {str(p) for p in changes.new}
 
         for source_path in changes.removed:
+            if should_continue and not should_continue():
+                break
             self._store.delete_by_source(source_path)
             manifest.pop(source_path, None)
             report.removed += 1
 
         to_process = changes.new + changes.modified
         for i, path in enumerate(to_process):
+            if should_continue and not should_continue():
+                break
             if on_progress:
                 on_progress(path.name, i + 1, len(to_process))
             try:
@@ -167,8 +175,12 @@ class IngestUseCase:
                     report.added += 1
                 else:
                     report.updated += 1
+                if on_file_done:
+                    on_file_done(path.name, True, "")
             except Exception as exc:
                 report.errors.append((str(path), str(exc)))
+                if on_file_done:
+                    on_file_done(path.name, False, str(exc))
 
         self._save_manifest(manifest)
         report.elapsed_ms = (time.monotonic() - t0) * 1000
@@ -178,6 +190,8 @@ class IngestUseCase:
         self,
         corpus_dir: Path,
         on_progress: ProgressFn | None = None,
+        on_file_done: FileDoneFn | None = None,
+        should_continue: ShouldContinueFn | None = None,
         recursive: bool = True,
     ) -> IngestReport:
         t0 = time.monotonic()
@@ -186,7 +200,13 @@ class IngestUseCase:
             self._store.delete_by_source(source_path)
         manifest.clear()
         self._save_manifest(manifest)
-        report = self.ingest_incremental(corpus_dir, on_progress=on_progress, recursive=recursive)
+        report = self.ingest_incremental(
+            corpus_dir,
+            on_progress=on_progress,
+            on_file_done=on_file_done,
+            should_continue=should_continue,
+            recursive=recursive,
+        )
         report.elapsed_ms = (time.monotonic() - t0) * 1000
         return report
 
