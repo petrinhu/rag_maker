@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from rag_maker.adapters.driving.gui.workers import QueryWorker
-from rag_maker.composition.container import Container
+from rag_maker.composition.container import Container, get_store_stats
 from rag_maker.domain.models import QueryResult, RankedChunk
 
 
@@ -83,10 +83,23 @@ class QueryPanel(QWidget):
     def _do_search(self) -> None:
         query = self._search_edit.text().strip()
         if not query:
+            self._search_edit.setPlaceholderText("⚠ Digite uma consulta antes de buscar")
+            self._search_edit.setFocus()
             return
+
+        stats = get_store_stats(self._container.config)
+        if not stats.initialized or stats.chunk_count == 0:
+            QMessageBox.information(
+                self,
+                "Corpus vazio",
+                "Nenhum documento indexado.\n\nVá para a aba Corpus, selecione uma pasta e clique em 'Ingerir mudanças'.",
+            )
+            return
+
         top_k = self._k_slider.value()
         self._search_btn.setEnabled(False)
-        self._status_label.setText("Buscando…")
+        self._search_edit.setPlaceholderText("Consulta em linguagem natural…")
+        self._status_label.setText("Buscando… (primeira query pode demorar enquanto o modelo carrega)")
         self._worker = QueryWorker(self._container.query, query, top_k)
         self._worker.finished.connect(self._on_results)
         self._worker.error.connect(self._on_error)
@@ -103,7 +116,10 @@ class QueryPanel(QWidget):
             self._table.setItem(row, 1, QTableWidgetItem(rc.chunk.document_path.name))
             self._table.setItem(row, 2, QTableWidgetItem(str(rc.chunk.page or "—")))
             self._table.setItem(row, 3, QTableWidgetItem(rc.chunk.content[:120].replace("\n", " ")))
-        self._status_label.setText(f"{len(self._results)} resultados em {result.latency_ms:.0f} ms")
+        if self._results:
+            self._status_label.setText(f"{len(self._results)} resultados em {result.latency_ms:.0f} ms")
+        else:
+            self._status_label.setText(f"Nenhum resultado encontrado ({result.latency_ms:.0f} ms)")
 
     def _on_error(self, msg: str) -> None:
         self._search_btn.setEnabled(True)
