@@ -15,6 +15,8 @@ from rag_maker.domain.ports.embedder import EmbedderPort
 from rag_maker.domain.ports.loader import LoaderPort
 from rag_maker.domain.ports.vector_store import VectorStorePort
 
+ProgressFn = Callable[[str, int, int], None]  # (filename, current, total)
+
 
 @dataclass
 class _ManifestEntry:
@@ -117,11 +119,15 @@ class IngestUseCase:
         chunks = self._chunker.chunk(doc)
         texts = [c.content for c in chunks]
         vectors = self._embedder.embed_batch(texts)
-        return [IndexedChunk(chunk=c, vector=v) for c, v in zip(chunks, vectors)]
+        return [IndexedChunk(chunk=c, vector=v) for c, v in zip(chunks, vectors, strict=True)]
 
     # ── Public API ────────────────────────────────────────────────────────────
 
-    def ingest_incremental(self, corpus_dir: Path) -> IngestReport:
+    def ingest_incremental(
+        self,
+        corpus_dir: Path,
+        on_progress: ProgressFn | None = None,
+    ) -> IngestReport:
         t0 = time.monotonic()
         changes = self.scan_changes(corpus_dir)
         manifest = self._load_manifest()
@@ -133,7 +139,10 @@ class IngestUseCase:
             manifest.pop(source_path, None)
             report.removed += 1
 
-        for path in changes.new + changes.modified:
+        to_process = changes.new + changes.modified
+        for i, path in enumerate(to_process):
+            if on_progress:
+                on_progress(path.name, i + 1, len(to_process))
             try:
                 indexed = self._ingest_file(path)
                 self._store.upsert(indexed)
@@ -152,16 +161,26 @@ class IngestUseCase:
         report.elapsed_ms = (time.monotonic() - t0) * 1000
         return report
 
-    def recreate_all(self, corpus_dir: Path) -> IngestReport:
+    def recreate_all(
+        self,
+        corpus_dir: Path,
+        on_progress: ProgressFn | None = None,
+    ) -> IngestReport:
         t0 = time.monotonic()
         manifest = self._load_manifest()
         for source_path in list(manifest.keys()):
             self._store.delete_by_source(source_path)
         manifest.clear()
         self._save_manifest(manifest)
-        report = self.ingest_incremental(corpus_dir)
+        report = self.ingest_incremental(corpus_dir, on_progress=on_progress)
         report.elapsed_ms = (time.monotonic() - t0) * 1000
         return report
+
+    def remove_file(self, source_path: str) -> None:
+        self._store.delete_by_source(source_path)
+        manifest = self._load_manifest()
+        manifest.pop(source_path, None)
+        self._save_manifest(manifest)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

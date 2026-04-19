@@ -11,8 +11,9 @@ from rag_maker.domain.models import QueryResult
 
 
 class IngestWorker(QThread):
-    finished = Signal(object)   # IngestReport
+    finished = Signal(object)       # IngestReport
     error = Signal(str)
+    progress = Signal(str, int, int)  # filename, current, total
 
     def __init__(self, container: Container, corpus_dir: Path, full: bool = False) -> None:
         super().__init__()
@@ -21,11 +22,18 @@ class IngestWorker(QThread):
         self._full = full
 
     def run(self) -> None:
+        def _on_progress(filename: str, current: int, total: int) -> None:
+            self.progress.emit(filename, current, total)
+
         try:
             if self._full:
-                report: IngestReport = self._container.ingest.recreate_all(self._corpus_dir)
+                report: IngestReport = self._container.ingest.recreate_all(
+                    self._corpus_dir, on_progress=_on_progress
+                )
             else:
-                report = self._container.ingest.ingest_incremental(self._corpus_dir)
+                report = self._container.ingest.ingest_incremental(
+                    self._corpus_dir, on_progress=_on_progress
+                )
             self.finished.emit(report)
         except Exception as exc:
             self.error.emit(str(exc))

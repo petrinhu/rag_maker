@@ -80,6 +80,17 @@ class LanceVectorStore:
             "embedding_dim": self._dim,
         }
 
+    def list_sources(self) -> dict[str, int]:
+        try:
+            tbl = self._table.to_lance().to_table(columns=["source_path"])
+            counts: dict[str, int] = {}
+            for sp in tbl.column("source_path").to_pylist():
+                key = str(sp)
+                counts[key] = counts.get(key, 0) + 1
+            return counts
+        except Exception:
+            return {}
+
     def hybrid_search(
         self,
         vector: tuple[float, ...],

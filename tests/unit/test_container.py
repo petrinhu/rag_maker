@@ -47,6 +47,9 @@ class _FakeStore:
     def stats(self) -> dict[str, Any]:
         return {}
 
+    def list_sources(self) -> dict[str, int]:
+        return {}
+
 
 class _FakeReranker:
     def rerank(
