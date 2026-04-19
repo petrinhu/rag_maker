@@ -2193,6 +2193,7 @@ dependencies = [
     { name = "langchain-text-splitters" },
     { name = "pydantic-settings" },
     { name = "pypdf", extra = ["crypto"] },
+    { name = "pyside6" },
     { name = "python-docx" },
     { name = "rich" },
     { name = "sentence-transformers" },
@@ -2214,9 +2215,6 @@ dev = [
     { name = "respx" },
     { name = "ruff" },
 ]
-gui = [
-    { name = "pyside6" },
-]
 
 [package.metadata]
 requires-dist = [
@@ -2232,7 +2230,7 @@ requires-dist = [
     { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.7" },
     { name = "pydantic-settings", specifier = ">=2.2" },
     { name = "pypdf", extras = ["crypto"], specifier = ">=4" },
-    { name = "pyside6", marker = "extra == 'gui'", specifier = ">=6.7" },
+    { name = "pyside6", specifier = ">=6.7" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5" },
     { name = "pytest-qt", marker = "extra == 'dev'", specifier = ">=4" },
@@ -2245,7 +2243,7 @@ requires-dist = [
     { name = "tomli-w", specifier = ">=1.0" },
     { name = "typer", extras = ["all"], specifier = ">=0.12" },
 ]
-provides-extras = ["gui", "dev"]
+provides-extras = ["dev"]
 
 [[package]]
 name = "regex"
