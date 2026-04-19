@@ -6,7 +6,6 @@ from pathlib import Path
 from PySide6.QtCore import QStandardPaths, Qt, QUrl, Signal
 from PySide6.QtGui import QColor, QDesktopServices, QDragEnterEvent, QDropEvent, QPalette
 from PySide6.QtWidgets import (
-    QApplication,
     QButtonGroup,
     QCheckBox,
     QFileDialog,
@@ -38,31 +37,26 @@ _STATUS_REMOVED  = "✕ Removido"
 _NOTIFY_THRESHOLD_S = 10.0  # notificação de sistema só para operações longas
 
 
-def _status_styles() -> dict[str, tuple[str, QColor]]:
-    """Tinta a cor base real da tabela com a cor de destaque de cada status.
+def _status_styles(palette: QPalette | None = None) -> dict[str, tuple[str, QColor]]:
+    """Retorna (fg_hex, bg_qcolor) detectando dark mode pela cor do TEXTO.
 
-    Não depende de detecção de tema: usa QPalette.Base (fundo real da tabela,
-    já definido pelo tema da plataforma) misturado com a cor de acento.
+    Texto claro (lightness > 128) = dark mode.
+    Recebe a QPalette do widget de referência (tabela) para máxima precisão.
     """
-    app = QApplication.instance()
-    base = (
-        app.palette().color(QPalette.ColorRole.Base)
-        if isinstance(app, QApplication)
-        else QColor(255, 255, 255)
-    )
-
-    def tint(r: int, g: int, b: int, strength: float = 0.40) -> QColor:
-        return QColor(
-            int(base.red()   * (1 - strength) + r * strength),
-            int(base.green() * (1 - strength) + g * strength),
-            int(base.blue()  * (1 - strength) + b * strength),
-        )
-
+    pal = palette if palette is not None else QPalette()
+    dark = pal.color(QPalette.ColorRole.Text).lightness() > 128
+    if dark:
+        return {
+            _STATUS_NEW:      ("#82B1FF", QColor(20,  45,  90)),
+            _STATUS_MODIFIED: ("#FFAB40", QColor(70,  40,  10)),
+            _STATUS_INDEXED:  ("#69F0AE", QColor(15,  50,  25)),
+            _STATUS_REMOVED:  ("#FF5252", QColor(75,  20,  20)),
+        }
     return {
-        _STATUS_NEW:      ("#82B1FF", tint(30,  120, 255)),
-        _STATUS_MODIFIED: ("#FFAB40", tint(255, 140,   0)),
-        _STATUS_INDEXED:  ("#69F0AE", tint(30,  200, 100)),
-        _STATUS_REMOVED:  ("#FF5252", tint(255,  50,  50)),
+        _STATUS_NEW:      ("#1565C0", QColor(227, 242, 253)),
+        _STATUS_MODIFIED: ("#E65100", QColor(255, 243, 224)),
+        _STATUS_INDEXED:  ("#1B5E20", QColor(232, 245, 233)),
+        _STATUS_REMOVED:  ("#8B0000", QColor(255, 235, 238)),
     }
 
 
@@ -214,7 +208,7 @@ class CorpusPanel(QWidget):
             btn.clicked.connect(lambda _c, lbl=label: self._set_filter(lbl))
             filter_row.addWidget(btn)
 
-        _styles = _status_styles()
+        _styles = _status_styles(self._file_table.palette())
         _add_filter(None, "Todos")
         _add_filter(_STATUS_NEW,      _STATUS_NEW,      _styles[_STATUS_NEW][0])
         _add_filter(_STATUS_MODIFIED, _STATUS_MODIFIED, _styles[_STATUS_MODIFIED][0])
@@ -229,7 +223,7 @@ class CorpusPanel(QWidget):
         self._search_edit.textChanged.connect(self._apply_filters)
         files_layout.addWidget(self._search_edit)
 
-        self._file_table = QTableWidget(0, 4)
+        self._file_table: QTableWidget = QTableWidget(0, 4)
         self._file_table.setHorizontalHeaderLabels(["Obra", "Status", "Chunks", "Caminho"])
         hdr = self._file_table.horizontalHeader()
         hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
@@ -383,7 +377,7 @@ class CorpusPanel(QWidget):
         n_indexed  = len(report.unchanged)
         total = n_new + n_modified + n_removed + n_indexed
 
-        styles = _status_styles()
+        styles = _status_styles(self._file_table.palette())
         parts = []
         if n_indexed:
             fg = styles[_STATUS_INDEXED][0]
