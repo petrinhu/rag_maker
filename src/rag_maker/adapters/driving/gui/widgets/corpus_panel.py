@@ -38,31 +38,31 @@ _STATUS_REMOVED  = "✕ Removido"
 _NOTIFY_THRESHOLD_S = 10.0  # notificação de sistema só para operações longas
 
 
-def _is_dark() -> bool:
-    app = QApplication.instance()
-    if not isinstance(app, QApplication):
-        return False
-    try:
-        from PySide6.QtCore import Qt
-        return app.styleHints().colorScheme() == Qt.ColorScheme.Dark
-    except AttributeError:
-        return app.palette().color(QPalette.ColorRole.Window).lightness() < 128
-
-
 def _status_styles() -> dict[str, tuple[str, QColor]]:
-    """Retorna (fg_hex, bg_qcolor) por status, adaptado ao esquema de cores atual."""
-    if _is_dark():
-        return {
-            _STATUS_NEW:      ("#82B1FF", QColor(20,  45,  90)),
-            _STATUS_MODIFIED: ("#FFAB40", QColor(70,  40,  10)),
-            _STATUS_INDEXED:  ("#69F0AE", QColor(15,  50,  25)),
-            _STATUS_REMOVED:  ("#FF5252", QColor(75,  20,  20)),
-        }
+    """Tinta a cor base real da tabela com a cor de destaque de cada status.
+
+    Não depende de detecção de tema: usa QPalette.Base (fundo real da tabela,
+    já definido pelo tema da plataforma) misturado com a cor de acento.
+    """
+    app = QApplication.instance()
+    base = (
+        app.palette().color(QPalette.ColorRole.Base)
+        if isinstance(app, QApplication)
+        else QColor(255, 255, 255)
+    )
+
+    def tint(r: int, g: int, b: int, strength: float = 0.40) -> QColor:
+        return QColor(
+            int(base.red()   * (1 - strength) + r * strength),
+            int(base.green() * (1 - strength) + g * strength),
+            int(base.blue()  * (1 - strength) + b * strength),
+        )
+
     return {
-        _STATUS_NEW:      ("#1565C0", QColor(227, 242, 253)),
-        _STATUS_MODIFIED: ("#E65100", QColor(255, 243, 224)),
-        _STATUS_INDEXED:  ("#1B5E20", QColor(232, 245, 233)),
-        _STATUS_REMOVED:  ("#8B0000", QColor(255, 235, 238)),
+        _STATUS_NEW:      ("#82B1FF", tint(30,  120, 255)),
+        _STATUS_MODIFIED: ("#FFAB40", tint(255, 140,   0)),
+        _STATUS_INDEXED:  ("#69F0AE", tint(30,  200, 100)),
+        _STATUS_REMOVED:  ("#FF5252", tint(255,  50,  50)),
     }
 
 
