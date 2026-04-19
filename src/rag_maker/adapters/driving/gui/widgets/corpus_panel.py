@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 from PySide6.QtCore import QStandardPaths, Qt, QUrl, Signal
-from PySide6.QtGui import QColor, QDesktopServices, QDragEnterEvent, QDropEvent, QPalette
+from PySide6.QtGui import QColor, QDesktopServices, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -37,27 +37,12 @@ _STATUS_REMOVED  = "✕ Removido"
 _NOTIFY_THRESHOLD_S = 10.0  # notificação de sistema só para operações longas
 
 
-def _status_styles(palette: QPalette | None = None) -> dict[str, tuple[str, QColor]]:
-    """Retorna (fg_hex, bg_qcolor) detectando dark mode pela cor do TEXTO.
-
-    Texto claro (lightness > 128) = dark mode.
-    Recebe a QPalette do widget de referência (tabela) para máxima precisão.
-    """
-    pal = palette if palette is not None else QPalette()
-    dark = pal.color(QPalette.ColorRole.Text).lightness() > 128
-    if dark:
-        return {
-            _STATUS_NEW:      ("#82B1FF", QColor(20,  45,  90)),
-            _STATUS_MODIFIED: ("#FFAB40", QColor(70,  40,  10)),
-            _STATUS_INDEXED:  ("#69F0AE", QColor(15,  50,  25)),
-            _STATUS_REMOVED:  ("#FF5252", QColor(75,  20,  20)),
-        }
-    return {
-        _STATUS_NEW:      ("#1565C0", QColor(227, 242, 253)),
-        _STATUS_MODIFIED: ("#E65100", QColor(255, 243, 224)),
-        _STATUS_INDEXED:  ("#1B5E20", QColor(232, 245, 233)),
-        _STATUS_REMOVED:  ("#8B0000", QColor(255, 235, 238)),
-    }
+_STATUS_FG: dict[str, str] = {
+    _STATUS_NEW:      "#4A90D9",  # azul médio — legível em fundo claro e escuro
+    _STATUS_MODIFIED: "#D4820A",  # laranja escuro
+    _STATUS_INDEXED:  "#27AE60",  # verde médio
+    _STATUS_REMOVED:  "#C0392B",  # vermelho médio
+}
 
 
 class _DroppableLineEdit(QLineEdit):
@@ -208,12 +193,11 @@ class CorpusPanel(QWidget):
             btn.clicked.connect(lambda _c, lbl=label: self._set_filter(lbl))
             filter_row.addWidget(btn)
 
-        _styles = _status_styles(self._file_table.palette())
         _add_filter(None, "Todos")
-        _add_filter(_STATUS_NEW,      _STATUS_NEW,      _styles[_STATUS_NEW][0])
-        _add_filter(_STATUS_MODIFIED, _STATUS_MODIFIED, _styles[_STATUS_MODIFIED][0])
-        _add_filter(_STATUS_INDEXED,  _STATUS_INDEXED,  _styles[_STATUS_INDEXED][0])
-        _add_filter(_STATUS_REMOVED,  _STATUS_REMOVED,  _styles[_STATUS_REMOVED][0])
+        _add_filter(_STATUS_NEW,      _STATUS_NEW,      _STATUS_FG[_STATUS_NEW])
+        _add_filter(_STATUS_MODIFIED, _STATUS_MODIFIED, _STATUS_FG[_STATUS_MODIFIED])
+        _add_filter(_STATUS_INDEXED,  _STATUS_INDEXED,  _STATUS_FG[_STATUS_INDEXED])
+        _add_filter(_STATUS_REMOVED,  _STATUS_REMOVED,  _STATUS_FG[_STATUS_REMOVED])
         filter_row.addStretch()
         files_layout.addLayout(filter_row)
 
@@ -377,40 +361,29 @@ class CorpusPanel(QWidget):
         n_indexed  = len(report.unchanged)
         total = n_new + n_modified + n_removed + n_indexed
 
-        styles = _status_styles(self._file_table.palette())
         parts = []
         if n_indexed:
-            fg = styles[_STATUS_INDEXED][0]
-            parts.append(f"<font color='{fg}'>{n_indexed} indexado{'s' if n_indexed != 1 else ''}</font>")
+            parts.append(f"<font color='{_STATUS_FG[_STATUS_INDEXED]}'>{n_indexed} indexado{'s' if n_indexed != 1 else ''}</font>")
         if n_new:
-            fg = styles[_STATUS_NEW][0]
-            parts.append(f"<font color='{fg}'>{n_new} novo{'s' if n_new != 1 else ''}</font>")
+            parts.append(f"<font color='{_STATUS_FG[_STATUS_NEW]}'>{n_new} novo{'s' if n_new != 1 else ''}</font>")
         if n_modified:
-            fg = styles[_STATUS_MODIFIED][0]
-            parts.append(f"<font color='{fg}'>{n_modified} modificado{'s' if n_modified != 1 else ''}</font>")
+            parts.append(f"<font color='{_STATUS_FG[_STATUS_MODIFIED]}'>{n_modified} modificado{'s' if n_modified != 1 else ''}</font>")
         if n_removed:
-            fg = styles[_STATUS_REMOVED][0]
-            parts.append(f"<font color='{fg}'>{n_removed} removido{'s' if n_removed != 1 else ''}</font>")
+            parts.append(f"<font color='{_STATUS_FG[_STATUS_REMOVED]}'>{n_removed} removido{'s' if n_removed != 1 else ''}</font>")
         self._summary_label.setText(" · ".join(parts) if parts else f"{total} obras encontradas")
 
         self._file_table.setSortingEnabled(False)
         self._file_table.setRowCount(0)
 
         def _add_row(path_str: str, status: str) -> None:
-            row_fg, row_bg = styles[status]
-            # texto derivado da luminosidade do fundo — sem depender de detecção de tema
-            row_text = QColor(230, 230, 230) if row_bg.lightness() < 128 else QColor(30, 30, 30)
             p = Path(path_str)
             row = self._file_table.rowCount()
             self._file_table.insertRow(row)
             for col, text in enumerate([p.name, status, "", path_str]):
-                item = QTableWidgetItem(text)
-                item.setBackground(row_bg)
-                item.setForeground(row_text)
-                self._file_table.setItem(row, col, item)
+                self._file_table.setItem(row, col, QTableWidgetItem(text))
             status_item = self._file_table.item(row, 1)
             if status_item:
-                status_item.setForeground(QColor(row_fg))
+                status_item.setForeground(QColor(_STATUS_FG[status]))
                 status_item.setData(Qt.ItemDataRole.UserRole, status)
             chunks = sources.get(path_str, 0)
             chunk_item = self._file_table.item(row, 2)
