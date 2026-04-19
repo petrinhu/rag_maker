@@ -400,12 +400,15 @@ class CorpusPanel(QWidget):
 
         def _add_row(path_str: str, status: str) -> None:
             row_fg, row_bg = styles[status]
+            # texto derivado da luminosidade do fundo — sem depender de detecção de tema
+            row_text = QColor(230, 230, 230) if row_bg.lightness() < 128 else QColor(30, 30, 30)
             p = Path(path_str)
             row = self._file_table.rowCount()
             self._file_table.insertRow(row)
             for col, text in enumerate([p.name, status, "", path_str]):
                 item = QTableWidgetItem(text)
                 item.setBackground(row_bg)
+                item.setForeground(row_text)
                 self._file_table.setItem(row, col, item)
             status_item = self._file_table.item(row, 1)
             if status_item:
