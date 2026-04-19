@@ -80,7 +80,7 @@ def test_scan_all_new_when_manifest_empty(use_case: IngestUseCase) -> None:
     assert len(report.new) == len(list(CORPUS_MINI.rglob("*")))
     assert report.modified == []
     assert report.removed == []
-    assert report.unchanged == 0
+    assert report.unchanged == []
 
 
 @pytest.mark.integration()
@@ -90,7 +90,7 @@ def test_scan_unchanged_after_ingest(use_case: IngestUseCase) -> None:
     assert report.new == []
     assert report.modified == []
     assert report.removed == []
-    assert report.unchanged == len(list(CORPUS_MINI.rglob("*")))
+    assert len(report.unchanged) == len(list(CORPUS_MINI.rglob("*")))
 
 
 @pytest.mark.integration()

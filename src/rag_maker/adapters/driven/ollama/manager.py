@@ -69,8 +69,7 @@ def ensure_model(name: str, url: str, auto_pull: bool = False) -> None:
 
 
 def _pull(name: str, url: str) -> None:
-    with httpx.Client(timeout=600.0) as client:
-        with client.stream("POST", f"{url}/api/pull", json={"name": name, "stream": True}) as r:
-            r.raise_for_status()
-            for _ in r.iter_lines():
-                pass
+    with httpx.Client(timeout=600.0) as client, client.stream("POST", f"{url}/api/pull", json={"name": name, "stream": True}) as r:
+        r.raise_for_status()
+        for _ in r.iter_lines():
+            pass

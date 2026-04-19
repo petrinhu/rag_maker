@@ -4,7 +4,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
 
-from rag_maker.application.ingest_use_case import IngestReport
+from rag_maker.application.ingest_use_case import ChangeReport, IngestReport, IngestUseCase
 from rag_maker.application.query_use_case import QueryUseCase
 from rag_maker.composition.container import Container
 from rag_maker.domain.models import QueryResult
@@ -34,6 +34,23 @@ class IngestWorker(QThread):
                 report = self._container.ingest.ingest_incremental(
                     self._corpus_dir, on_progress=_on_progress
                 )
+            self.finished.emit(report)
+        except Exception as exc:
+            self.error.emit(str(exc))
+
+
+class ScanWorker(QThread):
+    finished = Signal(object)  # ChangeReport
+    error = Signal(str)
+
+    def __init__(self, ingest_uc: IngestUseCase, corpus_dir: Path) -> None:
+        super().__init__()
+        self._ingest_uc = ingest_uc
+        self._corpus_dir = corpus_dir
+
+    def run(self) -> None:
+        try:
+            report: ChangeReport = self._ingest_uc.scan_changes(self._corpus_dir)
             self.finished.emit(report)
         except Exception as exc:
             self.error.emit(str(exc))

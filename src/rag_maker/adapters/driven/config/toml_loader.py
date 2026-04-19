@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import os
 import tempfile
 import tomllib
@@ -27,8 +28,6 @@ def save_toml(path: Path, data: dict[str, Any]) -> None:
             fh.write(content)
         os.replace(tmp, path)
     except Exception:
-        try:
+        with contextlib.suppress(OSError):
             os.unlink(tmp)
-        except OSError:
-            pass
         raise

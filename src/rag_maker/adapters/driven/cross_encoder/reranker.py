@@ -38,7 +38,7 @@ class CrossEncoderReranker:
         model = self._get_model()
         pairs: Any = [(query, c.chunk.content) for c in chunks]
         raw_scores: list[float] = model.predict(pairs).tolist()
-        ranked = sorted(zip(chunks, raw_scores), key=lambda x: x[1], reverse=True)
+        ranked = sorted(zip(chunks, raw_scores, strict=True), key=lambda x: x[1], reverse=True)
         return [
             RankedChunk(chunk=rc.chunk, rerank_score=float(s), rrf_score=rc.rrf_score)
             for rc, s in ranked[:top_k]

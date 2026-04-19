@@ -29,7 +29,7 @@ class ChangeReport:
     new: list[Path] = field(default_factory=list)
     modified: list[Path] = field(default_factory=list)
     removed: list[str] = field(default_factory=list)
-    unchanged: int = 0
+    unchanged: list[Path] = field(default_factory=list)
 
 
 @dataclass
@@ -114,7 +114,7 @@ class IngestUseCase:
             elif path.stat().st_mtime != entry.mtime or _sha256_file(path) != entry.content_hash:
                 report.modified.append(path)
             else:
-                report.unchanged += 1
+                report.unchanged.append(path)
 
         for key in manifest:
             if key not in seen:

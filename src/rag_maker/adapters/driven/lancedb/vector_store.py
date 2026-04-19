@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 from typing import Any
 
@@ -152,16 +153,12 @@ class LanceVectorStore:
     # ── Manutenção de índices ─────────────────────────────────────────────────
 
     def ensure_fts_index(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self._table.create_fts_index("text", replace=True)
-        except Exception:
-            pass
 
     def ensure_vector_index(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self._table.create_index(metric="cosine", replace=True)
-        except Exception:
-            pass
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
