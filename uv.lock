@@ -2100,7 +2100,7 @@ requires-dist = [
     { name = "sentence-transformers", specifier = ">=3.3" },
     { name = "structlog", specifier = ">=24" },
     { name = "tomli-w", specifier = ">=1.0" },
-    { name = "typer", specifier = ">=0.12" },
+    { name = "typer", extras = ["all"], specifier = ">=0.12" },
 ]
 provides-extras = ["gui", "dev"]
 

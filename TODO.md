@@ -118,10 +118,10 @@ Referências:
 | F6.8 | GUI Qt6 | StatusBar com estado do Ollama (verde/amarelo/vermelho) + modelo carregado + contador de chunks no banco | Média | F6.3 | Baixa | ✅ Concluído | ✓ |
 | F6.9 | GUI Qt6 | Entry point `rag-gui` no `pyproject.toml` (`[project.scripts]`) | Média | F1.4 | Baixa | ✅ Concluído | ✓ |
 | F6.10 | GUI Qt6 | Smoke test manual (WCAG AA: contraste, navegação por teclado, focus visível): abrir, ingerir mini corpus, rodar query | Média | F6.9 | Baixa | 🔍 Pendente verificação | — |
-| F7.1 | Polimento | Shell completion Typer (`rag --install-completion`) | Baixa | F5.1 | Baixa | ⏳ Pendente | — |
-| F7.2 | Polimento | `scripts/benchmark_retrieval.py` (latência por etapa do pipeline: embed/search/rerank) | Baixa | F4.3 | Média | ⏳ Pendente | — |
-| F7.3 | Polimento | `README.md` (quickstart humano, stack, screenshots da GUI, troubleshooting, link para AGENTS.md) | Média | F5.10, F6.10 | Baixa | ⏳ Pendente | — |
-| F7.4 | Polimento | `.pre-commit-config.yaml` (ruff check/format + mypy + bandit + lint-imports + pytest unit curto) | Baixa | F1.6, F1.7, F1.13, F1.14 | Baixa | ⏳ Pendente | — |
-| F7.5 | Distribuição | `uv build` → wheel + sdist em `dist/`; verificar metadata | Média | F7.4 | Baixa | ⏳ Pendente | — |
+| F7.1 | Polimento | Shell completion Typer (`rag --install-completion`) | Baixa | F5.1 | Baixa | ✅ Concluído | ✓ |
+| F7.2 | Polimento | `scripts/benchmark_retrieval.py` (latência por etapa do pipeline: embed/search/rerank) | Baixa | F4.3 | Média | ✅ Concluído | ✓ |
+| F7.3 | Polimento | `README.md` (quickstart humano, stack, screenshots da GUI, troubleshooting, link para AGENTS.md) | Média | F5.10, F6.10 | Baixa | ✅ Concluído | ✓ |
+| F7.4 | Polimento | `.pre-commit-config.yaml` (ruff check/format + mypy + bandit + lint-imports + pytest unit curto) | Baixa | F1.6, F1.7, F1.13, F1.14 | Baixa | ✅ Concluído | ✓ |
+| F7.5 | Distribuição | `uv build` → wheel + sdist em `dist/`; verificar metadata | Média | F7.4 | Baixa | ✅ Concluído | ✓ |
 | F7.6 | Distribuição | Testar `pipx install dist/*.whl` em ambiente limpo (binários `rag` e `rag-gui` no PATH) | Média | F7.5 | Baixa | 🔍 Pendente verificação | — |
 | F7.7 | Distribuição | Commit final (Conventional Commits) + tag `v0.1.0` | Média | F7.6 | Baixa | ⏳ Pendente | — |
