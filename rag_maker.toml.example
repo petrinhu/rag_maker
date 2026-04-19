@@ -1,0 +1,34 @@
+# rag_maker — configuração de exemplo
+# Copie para ~/.config/rag_maker/config.toml e ajuste os caminhos.
+# Este arquivo nunca é lido pelo sistema; é apenas documentação.
+
+[paths]
+corpus_dir = "/caminho/para/seus/livros"
+db_dir     = "~/.local/share/rag_maker/db"
+
+[ollama]
+url             = "http://127.0.0.1:11434"
+embedding_model = "bge-m3:latest"
+timeout_seconds = 180
+auto_start      = true
+auto_pull       = false   # true = baixa o modelo sem perguntar
+
+[chunking]
+size    = 1000
+overlap = 200
+
+[retrieval]
+coarse_top_n = 100
+rerank_top_k = 8
+alpha        = 0.5        # peso dense vs lexical no RRF (0.0=só BM25, 1.0=só HNSW)
+
+[reranker]
+model  = "BAAI/bge-reranker-v2-m3"
+device = "auto"           # cpu | cuda | auto
+
+[logging]
+level  = "INFO"
+format = "console"        # console | json
+
+[ignored]
+paths = []                # lista de caminhos absolutos a ignorar na ingestão

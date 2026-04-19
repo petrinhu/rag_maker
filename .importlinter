@@ -1,0 +1,48 @@
+[importlinter]
+root_packages =
+    rag_maker
+include_external_packages = True
+
+[importlinter:contract:domain-is-pure]
+name = domain nunca importa de adapters, application ou composition
+type = forbidden
+source_modules =
+    rag_maker.domain
+forbidden_modules =
+    rag_maker.adapters
+    rag_maker.application
+    rag_maker.composition
+    lancedb
+    httpx
+    pypdf
+    docx
+    ebooklib
+    PySide6
+    sentence_transformers
+    typer
+    rich
+    structlog
+
+[importlinter:contract:application-only-knows-domain]
+name = application só importa de domain
+type = forbidden
+source_modules =
+    rag_maker.application
+forbidden_modules =
+    rag_maker.adapters
+    rag_maker.composition
+
+[importlinter:contract:driving-does-not-import-driven]
+name = adapters driving não importa de adapters driven diretamente
+type = forbidden
+source_modules =
+    rag_maker.adapters.driving
+forbidden_modules =
+    rag_maker.adapters.driven
+ignore_imports =
+    rag_maker.composition.container -> rag_maker.adapters.driven.lancedb.vector_store
+    rag_maker.composition.container -> rag_maker.adapters.driven.ollama.embedder
+    rag_maker.composition.container -> rag_maker.adapters.driven.ollama.manager
+    rag_maker.composition.container -> rag_maker.adapters.driven.loaders
+    rag_maker.composition.container -> rag_maker.adapters.driven.cross_encoder.reranker
+    rag_maker.composition.container -> rag_maker.adapters.driven.config.toml_loader
