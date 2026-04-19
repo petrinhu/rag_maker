@@ -88,6 +88,8 @@ class CorpusPanel(QWidget):
         self._last_filename: str = ""
         self._last_current: int = 0
         self._last_total: int = 0
+        self._chunk_current: int = 0
+        self._chunk_total: int = 1
         self._eta_timer = QTimer(self)
         self._eta_timer.setInterval(1000)
         self._eta_timer.timeout.connect(self._tick_eta)
@@ -518,25 +520,37 @@ class CorpusPanel(QWidget):
         self._last_filename = filename
         self._last_current  = current
         self._last_total    = total
-        elapsed = time.monotonic() - self._ingest_start_time
-        if current > 0:
-            eta = (elapsed / current) * (total - current)
-            self._eta_end = time.monotonic() + eta
-            if not self._eta_timer.isActive():
-                self._eta_timer.start()
+        self._chunk_current = 0
+        self._chunk_total   = 1
+        if not self._eta_timer.isActive():
+            self._eta_timer.start()
+        self._recompute_eta()
         self._tick_eta()
-
-    def _tick_eta(self) -> None:
-        remaining = self._eta_end - time.monotonic()
-        eta_str   = f"  ETA: {_fmt_eta(remaining)}" if remaining > 1 else ""
-        self._progress_label.setText(
-            f"[{self._last_current}/{self._last_total}] {self._last_filename}{eta_str}"
-        )
 
     def _on_file_progress(self, current: int, total: int) -> None:
         self._file_progress_bar.setMaximum(total)
         self._file_progress_bar.setValue(current)
         self._chunk_label.setText(f"chunk {current} de {total}")
+        self._chunk_current = current
+        self._chunk_total   = max(total, 1)
+        self._recompute_eta()
+
+    def _recompute_eta(self) -> None:
+        """Recalcula _eta_end usando progresso de chunks como fração do arquivo atual."""
+        elapsed = time.monotonic() - self._ingest_start_time
+        cur, tot = self._last_current, self._last_total
+        effective_done = (cur - 1) + self._chunk_current / self._chunk_total
+        effective_remaining = tot - effective_done
+        if effective_done > 0.05 and elapsed > 0.5 and effective_remaining > 0:
+            rate = elapsed / effective_done          # segundos por arquivo-equivalente
+            self._eta_end = time.monotonic() + rate * effective_remaining
+
+    def _tick_eta(self) -> None:
+        remaining = self._eta_end - time.monotonic()
+        eta_part  = f"  ETA: {_fmt_eta(remaining)}" if remaining > 1 else ""
+        self._progress_label.setText(
+            f"[{self._last_current}/{self._last_total}] {self._last_filename}{eta_part}"
+        )
 
     def _on_file_result(self, filename: str, ok: bool, msg: str) -> None:
         if ok:
