@@ -93,6 +93,24 @@ def ollama_is_running(config: AppConfig) -> bool:
     return probe(url=config.ollama.url)
 
 
+_OLLAMA_CANDIDATES = [
+    "http://127.0.0.1:11434",
+    "http://0.0.0.0:11434",
+    "http://localhost:11434",
+]
+
+
+def detect_ollama_url() -> str:
+    """Proba candidatos comuns + OLLAMA_HOST; retorna o primeiro que responde."""
+    import os
+    env_host = os.environ.get("OLLAMA_HOST", "").strip()
+    candidates = ([env_host] if env_host else []) + _OLLAMA_CANDIDATES
+    for url in candidates:
+        if probe(url, timeout=1.5):
+            return url
+    return _OLLAMA_CANDIDATES[0]
+
+
 def list_ollama_models(config: AppConfig) -> list[str]:
     from rag_maker.adapters.driven.ollama.manager import list_models as _list_models
     return _list_models(url=config.ollama.url)

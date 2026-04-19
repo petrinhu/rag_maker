@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import (
     QFormLayout,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -12,14 +13,20 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from rag_maker.composition.container import get_config_path, set_config_value
+from rag_maker.application.config import AppConfig
+from rag_maker.composition.container import detect_ollama_url, get_config_path, set_config_value
 
 
 class SettingsPanel(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._fields: dict[str, QLineEdit | QSpinBox] = {}
+        try:
+            self._config = AppConfig.from_file()
+        except Exception:
+            self._config = AppConfig()
         self._build_ui()
+        self._populate()
 
     def _build_ui(self) -> None:
         outer = QVBoxLayout(self)
@@ -45,7 +52,18 @@ class SettingsPanel(QWidget):
         _add_str("DB dir", "paths.db_dir", "~/.local/share/rag_maker/db")
 
         form.addRow(QLabel("<b>Ollama</b>"))
-        _add_str("URL", "ollama.url", "http://127.0.0.1:11434")
+        # URL com botão de auto-detecção
+        url_edit = QLineEdit()
+        url_edit.setPlaceholderText("http://127.0.0.1:11434")
+        self._fields["ollama.url"] = url_edit
+        detect_btn = QPushButton("Detectar")
+        detect_btn.setFixedWidth(80)
+        detect_btn.clicked.connect(self._detect_url)
+        url_row = QHBoxLayout()
+        url_row.addWidget(url_edit)
+        url_row.addWidget(detect_btn)
+        form.addRow("URL", url_row)
+
         _add_str("Modelo de embedding", "ollama.embedding_model", "bge-m3:latest")
         _add_int("Timeout (s)", "ollama.timeout_seconds", 10, 600)
 
@@ -71,6 +89,38 @@ class SettingsPanel(QWidget):
         cfg_path_label = QLabel(f"Config: {get_config_path()}")
         cfg_path_label.setWordWrap(True)
         outer.addWidget(cfg_path_label)
+
+    def _populate(self) -> None:
+        cfg = self._config
+        str_map: dict[str, str] = {
+            "paths.corpus_dir": str(cfg.paths.corpus_dir) if cfg.paths.corpus_dir else "",
+            "paths.db_dir": str(cfg.paths.db_dir),
+            "ollama.url": detect_ollama_url(),
+            "ollama.embedding_model": cfg.ollama.embedding_model,
+            "reranker.model": cfg.reranker.model,
+            "reranker.device": cfg.reranker.device,
+        }
+        int_map: dict[str, int] = {
+            "ollama.timeout_seconds": cfg.ollama.timeout_seconds,
+            "chunking.size": cfg.chunking.size,
+            "chunking.overlap": cfg.chunking.overlap,
+            "retrieval.coarse_top_n": cfg.retrieval.coarse_top_n,
+            "retrieval.rerank_top_k": cfg.retrieval.rerank_top_k,
+        }
+        for key, str_val in str_map.items():
+            widget = self._fields.get(key)
+            if isinstance(widget, QLineEdit):
+                widget.setText(str_val)
+        for key, int_val in int_map.items():
+            widget = self._fields.get(key)
+            if isinstance(widget, QSpinBox):
+                widget.setValue(int_val)
+
+    def _detect_url(self) -> None:
+        url = detect_ollama_url()
+        widget = self._fields.get("ollama.url")
+        if isinstance(widget, QLineEdit):
+            widget.setText(url)
 
     def _save(self) -> None:
         try:
