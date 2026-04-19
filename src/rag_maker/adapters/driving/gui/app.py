@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import configparser
 import os
 import sys
 import types
-from pathlib import Path
 
+import darkdetect
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -24,26 +23,8 @@ def _ensure_platform_theme() -> None:
         os.environ["QT_QPA_PLATFORMTHEME"] = "gnome"
 
 
-def _kde_wants_dark() -> bool:
-    """Lê ~/.config/kdeglobals para verificar se o tema escuro está ativo."""
-    kde_globals = Path.home() / ".config" / "kdeglobals"
-    if not kde_globals.exists():
-        return False
-    config = configparser.ConfigParser()
-    try:
-        config.read(kde_globals, encoding="utf-8")
-        bg = config.get("Colors:Window", "BackgroundNormal", fallback=None)
-        if bg:
-            r, g, b = (int(x) for x in bg.split(","))
-            luminance = 0.299 * r + 0.587 * g + 0.114 * b
-            return luminance < 128
-    except Exception:
-        pass
-    return False
-
-
 def _apply_fusion_dark(app: QApplication) -> None:
-    """Paleta Fusion escura — fallback quando o plugin kde não é encontrado."""
+    """Paleta Fusion escura — fallback quando o plugin de tema do sistema não carrega."""
     app.setStyle("Fusion")
     c = QColor
     dark = QPalette()
@@ -70,8 +51,8 @@ def _apply_fusion_dark(app: QApplication) -> None:
 
 
 def _fix_dark_mode_if_needed(app: QApplication) -> None:
-    """Se o KDE quer dark mas Qt carregou tema claro, aplica paleta Fusion escura."""
-    if not _kde_wants_dark():
+    """Aplica Fusion dark se o sistema quer dark mas o Qt carregou tema claro."""
+    if not darkdetect.isDark():
         return
     bg = app.palette().color(QPalette.ColorRole.Window)
     luminance = 0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()

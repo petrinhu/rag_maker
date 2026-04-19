@@ -21,6 +21,7 @@ dependencies = [
   "sentence-transformers>=3.3",
   "tomli-w>=1.0",
   "PySide6>=6.7",
+  "darkdetect>=0.8",
 ]
 
 [project.optional-dependencies]
