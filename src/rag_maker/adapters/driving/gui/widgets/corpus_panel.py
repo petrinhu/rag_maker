@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QStandardPaths, Qt, Signal
 from PySide6.QtWidgets import (
     QFileDialog,
     QGroupBox,
@@ -117,7 +117,15 @@ class CorpusPanel(QWidget):
     # ── Navegação ─────────────────────────────────────────────────────────────
 
     def _browse(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "Selecionar pasta do corpus")
+        current = self._path_edit.text().strip()
+        if current and Path(current).is_dir():
+            start_dir = current
+        else:
+            docs = QStandardPaths.writableLocation(
+                QStandardPaths.StandardLocation.DocumentsLocation
+            )
+            start_dir = docs or str(Path.home())
+        folder = QFileDialog.getExistingDirectory(self, "Selecionar pasta do corpus", start_dir)
         if folder:
             self._path_edit.setText(folder)
 
