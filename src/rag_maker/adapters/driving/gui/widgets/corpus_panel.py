@@ -4,8 +4,9 @@ import time
 from pathlib import Path
 
 from PySide6.QtCore import QStandardPaths, Qt, QUrl, Signal
-from PySide6.QtGui import QColor, QDesktopServices, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QColor, QDesktopServices, QDragEnterEvent, QDropEvent, QPalette
 from PySide6.QtWidgets import (
+    QApplication,
     QButtonGroup,
     QCheckBox,
     QFileDialog,
@@ -29,13 +30,36 @@ from rag_maker.adapters.driving.gui.workers import IngestWorker, ScanWorker
 from rag_maker.application.ingest_use_case import ChangeReport, IngestReport
 from rag_maker.composition.container import Container, set_config_value
 
-# (label, fg_color, bg_color)
-_STATUS_NEW      = ("⬆ Novo",       "#1565C0", QColor(227, 242, 253))
-_STATUS_MODIFIED = ("↻ Modificado", "#E65100", QColor(255, 243, 224))
-_STATUS_INDEXED  = ("✓ Indexado",   "#1B5E20", QColor(232, 245, 233))
-_STATUS_REMOVED  = ("✕ Removido",   "#8B0000", QColor(255, 235, 238))
+_STATUS_NEW      = "⬆ Novo"
+_STATUS_MODIFIED = "↻ Modificado"
+_STATUS_INDEXED  = "✓ Indexado"
+_STATUS_REMOVED  = "✕ Removido"
 
 _NOTIFY_THRESHOLD_S = 10.0  # notificação de sistema só para operações longas
+
+
+def _is_dark() -> bool:
+    app = QApplication.instance()
+    if not isinstance(app, QApplication):
+        return False
+    return app.palette().color(QPalette.ColorRole.Window).lightness() < 128
+
+
+def _status_styles() -> dict[str, tuple[str, QColor]]:
+    """Retorna (fg_hex, bg_qcolor) por status, adaptado ao esquema de cores atual."""
+    if _is_dark():
+        return {
+            _STATUS_NEW:      ("#82B1FF", QColor(20,  45,  90)),
+            _STATUS_MODIFIED: ("#FFAB40", QColor(70,  40,  10)),
+            _STATUS_INDEXED:  ("#69F0AE", QColor(15,  50,  25)),
+            _STATUS_REMOVED:  ("#FF5252", QColor(75,  20,  20)),
+        }
+    return {
+        _STATUS_NEW:      ("#1565C0", QColor(227, 242, 253)),
+        _STATUS_MODIFIED: ("#E65100", QColor(255, 243, 224)),
+        _STATUS_INDEXED:  ("#1B5E20", QColor(232, 245, 233)),
+        _STATUS_REMOVED:  ("#8B0000", QColor(255, 235, 238)),
+    }
 
 
 class _DroppableLineEdit(QLineEdit):
@@ -133,6 +157,7 @@ class CorpusPanel(QWidget):
         # ── Progresso ────────────────────────────────────────────────────────
         self._progress_bar = QProgressBar()
         self._progress_bar.setVisible(False)
+        self._progress_bar.setToolTip("Progresso geral: arquivos processados")
         self._pause_btn = QPushButton("Pausar")
         self._pause_btn.setFixedWidth(90)
         self._pause_btn.setVisible(False)
@@ -149,6 +174,13 @@ class CorpusPanel(QWidget):
         self._progress_label = QLabel("")
         self._progress_label.setVisible(False)
         root.addWidget(self._progress_label)
+
+        self._file_progress_bar = QProgressBar()
+        self._file_progress_bar.setVisible(False)
+        self._file_progress_bar.setFixedHeight(10)
+        self._file_progress_bar.setToolTip("Progresso por arquivo: chunks sendo embutidos")
+        self._file_progress_bar.setTextVisible(False)
+        root.addWidget(self._file_progress_bar)
 
         # ── Tabela de obras ──────────────────────────────────────────────────
         files_group = QGroupBox("Obras do corpus")
@@ -175,11 +207,12 @@ class CorpusPanel(QWidget):
             btn.clicked.connect(lambda _c, lbl=label: self._set_filter(lbl))
             filter_row.addWidget(btn)
 
+        _styles = _status_styles()
         _add_filter(None, "Todos")
-        _add_filter(_STATUS_NEW[0],      _STATUS_NEW[0],      _STATUS_NEW[1])
-        _add_filter(_STATUS_MODIFIED[0], _STATUS_MODIFIED[0], _STATUS_MODIFIED[1])
-        _add_filter(_STATUS_INDEXED[0],  _STATUS_INDEXED[0],  _STATUS_INDEXED[1])
-        _add_filter(_STATUS_REMOVED[0],  _STATUS_REMOVED[0],  _STATUS_REMOVED[1])
+        _add_filter(_STATUS_NEW,      _STATUS_NEW,      _styles[_STATUS_NEW][0])
+        _add_filter(_STATUS_MODIFIED, _STATUS_MODIFIED, _styles[_STATUS_MODIFIED][0])
+        _add_filter(_STATUS_INDEXED,  _STATUS_INDEXED,  _styles[_STATUS_INDEXED][0])
+        _add_filter(_STATUS_REMOVED,  _STATUS_REMOVED,  _styles[_STATUS_REMOVED][0])
         filter_row.addStretch()
         files_layout.addLayout(filter_row)
 
@@ -343,54 +376,72 @@ class CorpusPanel(QWidget):
         n_indexed  = len(report.unchanged)
         total = n_new + n_modified + n_removed + n_indexed
 
+        styles = _status_styles()
         parts = []
         if n_indexed:
-            parts.append(f"<font color='#1B5E20'>{n_indexed} indexado{'s' if n_indexed != 1 else ''}</font>")
+            fg = styles[_STATUS_INDEXED][0]
+            parts.append(f"<font color='{fg}'>{n_indexed} indexado{'s' if n_indexed != 1 else ''}</font>")
         if n_new:
-            parts.append(f"<font color='#1565C0'>{n_new} novo{'s' if n_new != 1 else ''}</font>")
+            fg = styles[_STATUS_NEW][0]
+            parts.append(f"<font color='{fg}'>{n_new} novo{'s' if n_new != 1 else ''}</font>")
         if n_modified:
-            parts.append(f"<font color='#E65100'>{n_modified} modificado{'s' if n_modified != 1 else ''}</font>")
+            fg = styles[_STATUS_MODIFIED][0]
+            parts.append(f"<font color='{fg}'>{n_modified} modificado{'s' if n_modified != 1 else ''}</font>")
         if n_removed:
-            parts.append(f"<font color='#8B0000'>{n_removed} removido{'s' if n_removed != 1 else ''}</font>")
+            fg = styles[_STATUS_REMOVED][0]
+            parts.append(f"<font color='{fg}'>{n_removed} removido{'s' if n_removed != 1 else ''}</font>")
         self._summary_label.setText(" · ".join(parts) if parts else f"{total} obras encontradas")
 
         self._file_table.setSortingEnabled(False)
         self._file_table.setRowCount(0)
 
-        def _add_row(path_str: str, label: str, fg: str, bg: QColor) -> None:
+        def _add_row(path_str: str, status: str) -> None:
+            row_fg, row_bg = styles[status]
             p = Path(path_str)
             row = self._file_table.rowCount()
             self._file_table.insertRow(row)
-            for col, text in enumerate([p.name, label, "", path_str]):
+            for col, text in enumerate([p.name, status, "", path_str]):
                 item = QTableWidgetItem(text)
-                item.setBackground(bg)
+                item.setBackground(row_bg)
                 self._file_table.setItem(row, col, item)
             status_item = self._file_table.item(row, 1)
             if status_item:
-                status_item.setForeground(QColor(fg))
-                status_item.setData(Qt.ItemDataRole.UserRole, label)
+                status_item.setForeground(QColor(row_fg))
+                status_item.setData(Qt.ItemDataRole.UserRole, status)
             chunks = sources.get(path_str, 0)
             chunk_item = self._file_table.item(row, 2)
             if chunk_item:
                 chunk_item.setData(Qt.ItemDataRole.DisplayRole, chunks if chunks else None)
 
         for p in report.unchanged:
-            _add_row(str(p), *_STATUS_INDEXED)
+            _add_row(str(p), _STATUS_INDEXED)
         for p in report.new:
-            _add_row(str(p), *_STATUS_NEW)
+            _add_row(str(p), _STATUS_NEW)
         for p in report.modified:
-            _add_row(str(p), *_STATUS_MODIFIED)
+            _add_row(str(p), _STATUS_MODIFIED)
         for s in report.removed:
-            _add_row(s, *_STATUS_REMOVED)
+            _add_row(s, _STATUS_REMOVED)
 
         self._file_table.setSortingEnabled(True)
         self._apply_filters()
 
         db_dir = self._container.config.paths.resolved_db_dir()
         if db_dir.exists():
-            self._log_append(f"Banco de dados rag encontrado em: {db_dir}")
+            if sources:
+                total_chunks = sum(sources.values())
+                n_docs = len(sources)
+                self._log_append(
+                    f"Banco em: {db_dir}  "
+                    f"({n_docs} doc{'s' if n_docs != 1 else ''}, "
+                    f"{total_chunks} chunk{'s' if total_chunks != 1 else ''})"
+                )
+            else:
+                self._log_append(
+                    f"Pasta rag/ existe em {db_dir} mas sem dados indexados — "
+                    "clique em 'Ingerir mudancas' para indexar."
+                )
         else:
-            self._log_append(f"Banco de dados ainda nao existe em: {db_dir}")
+            self._log_append(f"Banco ainda nao existe em: {db_dir}")
 
         if n_new or n_modified:
             self._log_append(
@@ -467,6 +518,7 @@ class CorpusPanel(QWidget):
             self._container, corpus, full=full, recursive=self._recursive_chk.isChecked()
         )
         self._ingest_worker.progress.connect(self._on_progress)
+        self._ingest_worker.file_progress.connect(self._on_file_progress)
         self._ingest_worker.file_result.connect(self._on_file_result)
         self._ingest_worker.finished.connect(self._on_ingest_done)
         self._ingest_worker.stopped.connect(self._on_ingest_stopped)
@@ -485,6 +537,10 @@ class CorpusPanel(QWidget):
         else:
             eta_str = ""
         self._progress_label.setText(f"[{current}/{total}] {filename}{eta_str}")
+
+    def _on_file_progress(self, current: int, total: int) -> None:
+        self._file_progress_bar.setMaximum(total)
+        self._file_progress_bar.setValue(current)
 
     def _on_file_result(self, filename: str, ok: bool, msg: str) -> None:
         if ok:
@@ -547,11 +603,13 @@ class CorpusPanel(QWidget):
         self._scan_btn.setEnabled(not busy)
         self._progress_bar.setVisible(busy)
         self._progress_label.setVisible(busy)
+        self._file_progress_bar.setVisible(busy)
         self._pause_btn.setVisible(busy)
         self._stop_btn.setVisible(busy)
         if not busy:
             self._progress_label.setText("")
             self._pause_btn.setText("Pausar")
+            self._file_progress_bar.setValue(0)
 
     def _log_append(self, msg: str) -> None:
         self._log.append(msg)

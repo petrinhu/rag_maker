@@ -47,7 +47,10 @@ class LanceVectorStore:
         ])
 
     def _open_or_create(self) -> Any:
-        if self._table_name in self._db.list_tables():
+        response = self._db.list_tables()
+        # list_tables() retorna ListTablesResponse em lancedb>=0.10, não uma lista
+        names: list[str] = response.tables if hasattr(response, "tables") else list(response)
+        if self._table_name in names:
             return self._db.open_table(self._table_name)
         try:
             return self._db.create_table(self._table_name, schema=self._schema())
@@ -83,10 +86,13 @@ class LanceVectorStore:
 
     def list_sources(self) -> dict[str, int]:
         try:
-            tbl = self._table.to_lance().to_table(columns=["source_path"])
+            n = self._table.count_rows()
+            if n == 0:
+                return {}
+            rows = self._table.search().select(["source_path"]).limit(n).to_list()
             counts: dict[str, int] = {}
-            for sp in tbl.column("source_path").to_pylist():
-                key = str(sp)
+            for row in rows:
+                key = str(row["source_path"])
                 counts[key] = counts.get(key, 0) + 1
             return counts
         except Exception:

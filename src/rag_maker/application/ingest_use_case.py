@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import time
@@ -15,9 +16,14 @@ from rag_maker.domain.ports.embedder import EmbedderPort
 from rag_maker.domain.ports.loader import LoaderPort
 from rag_maker.domain.ports.vector_store import VectorStorePort
 
-ProgressFn      = Callable[[str, int, int], None]   # (filename, current, total)
-FileDoneFn      = Callable[[str, bool, str], None]  # (filename, success, error_msg)
+ProgressFn       = Callable[[str, int, int], None]   # (filename, current, total)
+FileDoneFn       = Callable[[str, bool, str], None]  # (filename, success, error_msg)
 ShouldContinueFn = Callable[[], bool]
+ChunkProgressFn  = Callable[[int, int], None]        # (current_chunk, total_chunks)
+
+
+class _IngestionStopped(Exception):
+    """Lançada quando should_continue() retorna False dentro de _ingest_file."""
 
 
 @dataclass
@@ -94,8 +100,29 @@ class IngestUseCase:
         except Exception:
             return False
 
+    def _repair_manifest_from_store(self, manifest: dict[str, _ManifestEntry]) -> dict[str, _ManifestEntry]:
+        """Se o manifest estiver vazio mas o store tiver dados, reconstrói a partir do LanceDB."""
+        if manifest:
+            return manifest
+        sources = self._store.list_sources()
+        if not sources:
+            return manifest
+        repaired: dict[str, _ManifestEntry] = {}
+        for source_path_str in sources:
+            path = Path(source_path_str)
+            if path.exists():
+                with contextlib.suppress(Exception):
+                    repaired[source_path_str] = _ManifestEntry(
+                        mtime=path.stat().st_mtime,
+                        content_hash=_sha256_file(path),
+                    )
+        if repaired:
+            self._save_manifest(repaired)
+        return repaired
+
     def scan_changes(self, corpus_dir: Path, recursive: bool = True) -> ChangeReport:
         manifest = self._load_manifest()
+        manifest = self._repair_manifest_from_store(manifest)
         db_dir_str = str(self._db_dir)
         ignored = {str(p) for p in self._config.ignored.paths} | {db_dir_str}
         report = ChangeReport()
@@ -127,12 +154,25 @@ class IngestUseCase:
 
     # ── File ingestion ────────────────────────────────────────────────────────
 
-    def _ingest_file(self, path: Path) -> list[IndexedChunk]:
+    def _ingest_file(
+        self,
+        path: Path,
+        on_chunk_progress: ChunkProgressFn | None = None,
+        should_continue: ShouldContinueFn | None = None,
+    ) -> list[IndexedChunk]:
         loader = self._loader_for(path)
         doc = loader.load(path)
         chunks = self._chunker.chunk(doc)
-        texts = [c.content for c in chunks]
-        vectors = self._embedder.embed_batch(texts)
+        total = len(chunks)
+        vectors: list[tuple[float, ...]] = []
+        for i, chunk in enumerate(chunks):
+            if should_continue and not should_continue():
+                raise _IngestionStopped()
+            if on_chunk_progress:
+                on_chunk_progress(i, total)
+            vectors.append(self._embedder.embed(chunk.content))
+        if on_chunk_progress:
+            on_chunk_progress(total, total)
         return [IndexedChunk(chunk=c, vector=v) for c, v in zip(chunks, vectors, strict=True)]
 
     # ── Public API ────────────────────────────────────────────────────────────
@@ -142,6 +182,7 @@ class IngestUseCase:
         corpus_dir: Path,
         on_progress: ProgressFn | None = None,
         on_file_done: FileDoneFn | None = None,
+        on_chunk_progress: ChunkProgressFn | None = None,
         should_continue: ShouldContinueFn | None = None,
         recursive: bool = True,
     ) -> IngestReport:
@@ -165,7 +206,11 @@ class IngestUseCase:
             if on_progress:
                 on_progress(path.name, i + 1, len(to_process))
             try:
-                indexed = self._ingest_file(path)
+                indexed = self._ingest_file(
+                    path,
+                    on_chunk_progress=on_chunk_progress,
+                    should_continue=should_continue,
+                )
                 self._store.upsert(indexed)
                 manifest[str(path)] = _ManifestEntry(
                     mtime=path.stat().st_mtime,
@@ -177,12 +222,13 @@ class IngestUseCase:
                     report.updated += 1
                 if on_file_done:
                     on_file_done(path.name, True, "")
+                self._save_manifest(manifest)
+            except _IngestionStopped:
+                break  # não adiciona ao manifest; será re-processado na próxima vez
             except Exception as exc:
                 report.errors.append((str(path), str(exc)))
                 if on_file_done:
                     on_file_done(path.name, False, str(exc))
-
-        self._save_manifest(manifest)
         report.elapsed_ms = (time.monotonic() - t0) * 1000
         return report
 
@@ -191,6 +237,7 @@ class IngestUseCase:
         corpus_dir: Path,
         on_progress: ProgressFn | None = None,
         on_file_done: FileDoneFn | None = None,
+        on_chunk_progress: ChunkProgressFn | None = None,
         should_continue: ShouldContinueFn | None = None,
         recursive: bool = True,
     ) -> IngestReport:
@@ -204,6 +251,7 @@ class IngestUseCase:
             corpus_dir,
             on_progress=on_progress,
             on_file_done=on_file_done,
+            on_chunk_progress=on_chunk_progress,
             should_continue=should_continue,
             recursive=recursive,
         )

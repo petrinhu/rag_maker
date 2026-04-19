@@ -12,13 +12,14 @@ from rag_maker.domain.models import QueryResult
 
 
 class IngestWorker(QThread):
-    finished    = Signal(object)        # IngestReport
-    stopped     = Signal(object)        # IngestReport parcial
-    error       = Signal(str)
-    progress    = Signal(str, int, int) # filename, current, total
-    file_result = Signal(str, bool, str)# filename, success, error_msg
-    paused      = Signal()
-    resumed     = Signal()
+    finished       = Signal(object)        # IngestReport
+    stopped        = Signal(object)        # IngestReport parcial
+    error          = Signal(str)
+    progress       = Signal(str, int, int) # filename, current, total
+    file_progress  = Signal(int, int)      # chunk_current, chunk_total (dentro do arquivo)
+    file_result    = Signal(str, bool, str)# filename, success, error_msg
+    paused         = Signal()
+    resumed        = Signal()
 
     def __init__(
         self,
@@ -56,6 +57,9 @@ class IngestWorker(QThread):
         def _on_progress(filename: str, current: int, total: int) -> None:
             self.progress.emit(filename, current, total)
 
+        def _on_chunk_progress(current: int, total: int) -> None:
+            self.file_progress.emit(current, total)
+
         def _on_file_done(filename: str, ok: bool, msg: str) -> None:
             self.file_result.emit(filename, ok, msg)
 
@@ -65,6 +69,7 @@ class IngestWorker(QThread):
                     self._corpus_dir,
                     on_progress=_on_progress,
                     on_file_done=_on_file_done,
+                    on_chunk_progress=_on_chunk_progress,
                     should_continue=self._should_continue,
                     recursive=self._recursive,
                 )
@@ -73,6 +78,7 @@ class IngestWorker(QThread):
                     self._corpus_dir,
                     on_progress=_on_progress,
                     on_file_done=_on_file_done,
+                    on_chunk_progress=_on_chunk_progress,
                     should_continue=self._should_continue,
                     recursive=self._recursive,
                 )

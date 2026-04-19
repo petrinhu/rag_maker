@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 
 from pypdf import PdfReader
-from pypdf.errors import PdfReadError
+from pypdf.errors import PdfReadError, PdfReadWarning
 
 from rag_maker.adapters.driven.loaders._utils import sha256_file
 from rag_maker.domain.models import Document, LoadError
@@ -17,7 +18,9 @@ class PdfLoader:
 
     def load(self, path: Path) -> Document:
         try:
-            reader = PdfReader(str(path))
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", PdfReadWarning)
+                reader = PdfReader(str(path))
         except PdfReadError as e:
             raise LoadError(f"Erro ao abrir PDF '{path}': {e}") from e
 
