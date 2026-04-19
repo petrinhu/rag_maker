@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import configparser
 import os
 import sys
 import types
+from pathlib import Path
 
+from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from rag_maker.adapters.driving.gui.main_window import MainWindow
@@ -19,6 +22,61 @@ def _ensure_platform_theme() -> None:
         os.environ["QT_QPA_PLATFORMTHEME"] = "kde"
     elif any(d in desktop for d in ("GNOME", "UNITY", "BUDGIE", "CINNAMON")):
         os.environ["QT_QPA_PLATFORMTHEME"] = "gnome"
+
+
+def _kde_wants_dark() -> bool:
+    """Lê ~/.config/kdeglobals para verificar se o tema escuro está ativo."""
+    kde_globals = Path.home() / ".config" / "kdeglobals"
+    if not kde_globals.exists():
+        return False
+    config = configparser.ConfigParser()
+    try:
+        config.read(kde_globals, encoding="utf-8")
+        bg = config.get("Colors:Window", "BackgroundNormal", fallback=None)
+        if bg:
+            r, g, b = (int(x) for x in bg.split(","))
+            luminance = 0.299 * r + 0.587 * g + 0.114 * b
+            return luminance < 128
+    except Exception:
+        pass
+    return False
+
+
+def _apply_fusion_dark(app: QApplication) -> None:
+    """Paleta Fusion escura — fallback quando o plugin kde não é encontrado."""
+    app.setStyle("Fusion")
+    c = QColor
+    dark = QPalette()
+    dark.setColor(QPalette.ColorRole.Window,          c(53,  53,  53))
+    dark.setColor(QPalette.ColorRole.WindowText,      c(255, 255, 255))
+    dark.setColor(QPalette.ColorRole.Base,            c(35,  35,  35))
+    dark.setColor(QPalette.ColorRole.AlternateBase,   c(53,  53,  53))
+    dark.setColor(QPalette.ColorRole.ToolTipBase,     c(25,  25,  25))
+    dark.setColor(QPalette.ColorRole.ToolTipText,     c(255, 255, 255))
+    dark.setColor(QPalette.ColorRole.Text,            c(255, 255, 255))
+    dark.setColor(QPalette.ColorRole.Button,          c(53,  53,  53))
+    dark.setColor(QPalette.ColorRole.ButtonText,      c(255, 255, 255))
+    dark.setColor(QPalette.ColorRole.BrightText,      c(255,   0,   0))
+    dark.setColor(QPalette.ColorRole.Link,            c(42,  130, 218))
+    dark.setColor(QPalette.ColorRole.Highlight,       c(42,  130, 218))
+    dark.setColor(QPalette.ColorRole.HighlightedText, c(35,  35,  35))
+    for role in (
+        QPalette.ColorRole.ButtonText,
+        QPalette.ColorRole.WindowText,
+        QPalette.ColorRole.Text,
+    ):
+        dark.setColor(QPalette.ColorGroup.Disabled, role, c(128, 128, 128))
+    app.setPalette(dark)
+
+
+def _fix_dark_mode_if_needed(app: QApplication) -> None:
+    """Se o KDE quer dark mas Qt carregou tema claro, aplica paleta Fusion escura."""
+    if not _kde_wants_dark():
+        return
+    bg = app.palette().color(QPalette.ColorRole.Window)
+    luminance = 0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()
+    if luminance >= 128:
+        _apply_fusion_dark(app)
 
 
 def _global_except_hook(
@@ -37,6 +95,7 @@ def main() -> None:
     app = QApplication(sys.argv)
     app.setApplicationName("rag-maker")
     app.setApplicationVersion("0.1.0")
+    _fix_dark_mode_if_needed(app)
 
     sys.excepthook = _global_except_hook
 
