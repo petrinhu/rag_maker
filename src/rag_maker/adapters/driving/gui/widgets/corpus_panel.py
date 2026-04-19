@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from PySide6.QtCore import QStandardPaths, Qt, QUrl, Signal
+from PySide6.QtCore import QStandardPaths, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QColor, QDesktopServices, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -83,6 +83,14 @@ class CorpusPanel(QWidget):
         self._scan_worker: ScanWorker | None = None
         self._active_status_filter: str | None = None
         self._ingest_start_time: float = 0.0
+        self._eta_end: float = 0.0
+        self._pause_start: float = 0.0
+        self._last_filename: str = ""
+        self._last_current: int = 0
+        self._last_total: int = 0
+        self._eta_timer = QTimer(self)
+        self._eta_timer.setInterval(1000)
+        self._eta_timer.timeout.connect(self._tick_eta)
         self._build_ui()
         if self._container.config.paths.corpus_dir:
             self._trigger_scan()
@@ -507,13 +515,23 @@ class CorpusPanel(QWidget):
     def _on_progress(self, filename: str, current: int, total: int) -> None:
         self._progress_bar.setMaximum(total)
         self._progress_bar.setValue(current)
+        self._last_filename = filename
+        self._last_current  = current
+        self._last_total    = total
         elapsed = time.monotonic() - self._ingest_start_time
         if current > 0:
             eta = (elapsed / current) * (total - current)
-            eta_str = f"  ETA: {eta:.0f}s" if eta > 1 else ""
-        else:
-            eta_str = ""
-        self._progress_label.setText(f"[{current}/{total}] {filename}{eta_str}")
+            self._eta_end = time.monotonic() + eta
+            if not self._eta_timer.isActive():
+                self._eta_timer.start()
+        self._tick_eta()
+
+    def _tick_eta(self) -> None:
+        remaining = self._eta_end - time.monotonic()
+        eta_str   = f"  ETA: {_fmt_eta(remaining)}" if remaining > 1 else ""
+        self._progress_label.setText(
+            f"[{self._last_current}/{self._last_total}] {self._last_filename}{eta_str}"
+        )
 
     def _on_file_progress(self, current: int, total: int) -> None:
         self._file_progress_bar.setMaximum(total)
@@ -528,10 +546,14 @@ class CorpusPanel(QWidget):
 
     def _on_paused(self) -> None:
         self._pause_btn.setText("Continuar")
+        self._pause_start = time.monotonic()
+        self._eta_timer.stop()
         self._progress_label.setText("Em pausa...")
 
     def _on_resumed(self) -> None:
         self._pause_btn.setText("Pausar")
+        self._eta_end += time.monotonic() - self._pause_start
+        self._eta_timer.start()
 
     def _on_ingest_done(self, report: IngestReport) -> None:
         self._set_busy(False)
@@ -586,6 +608,7 @@ class CorpusPanel(QWidget):
         self._pause_btn.setVisible(busy)
         self._stop_btn.setVisible(busy)
         if not busy:
+            self._eta_timer.stop()
             self._progress_label.setText("")
             self._pause_btn.setText("Pausar")
             self._file_progress_bar.setValue(0)
@@ -594,3 +617,13 @@ class CorpusPanel(QWidget):
     def _log_append(self, msg: str) -> None:
         self._log.append(msg)
         self._log.verticalScrollBar().setValue(self._log.verticalScrollBar().maximum())
+
+
+def _fmt_eta(seconds: float) -> str:
+    s = int(seconds)
+    if s <= 0:
+        return ""
+    if s < 60:
+        return f"{s}s"
+    m, s = divmod(s, 60)
+    return f"{m}m {s:02d}s"
