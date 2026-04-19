@@ -230,27 +230,38 @@ class CorpusPanel(QWidget):
     # ── Remoção ───────────────────────────────────────────────────────────────
 
     def _remove_selected(self) -> None:
-        row = self._file_table.currentRow()
-        if row < 0:
-            QMessageBox.information(self, "Remover", "Selecione uma obra na lista primeiro.")
+        selected = self._file_table.selectionModel().selectedRows()
+        if not selected:
+            QMessageBox.information(self, "Remover", "Selecione uma ou mais obras na lista primeiro.")
             return
-        path_item = self._file_table.item(row, 3)
-        if path_item is None:
+        paths = []
+        for index in selected:
+            path_item = self._file_table.item(index.row(), 3)
+            if path_item:
+                paths.append(path_item.text())
+        if not paths:
             return
-        path_str = path_item.text()
+        if len(paths) == 1:
+            msg = f"Remover '{Path(paths[0]).name}' do banco vetorial?\n\nO arquivo original não será apagado."
+        else:
+            names = "\n".join(f"  • {Path(p).name}" for p in paths)
+            msg = f"Remover {len(paths)} obras do banco vetorial?\n\n{names}\n\nOs arquivos originais não serão apagados."
         answer = QMessageBox.question(
-            self, "Remover do índice",
-            f"Remover '{Path(path_str).name}' do banco vetorial?\n\nO arquivo original não será apagado.",
+            self, "Remover do índice", msg,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if answer != QMessageBox.StandardButton.Yes:
             return
-        try:
-            self._container.ingest.remove_file(path_str)
-            self._log_append(f"✕ Removido: {Path(path_str).name}")
-            self._trigger_scan()
-        except Exception as exc:
-            QMessageBox.critical(self, "Erro", str(exc))
+        errors = []
+        for path_str in paths:
+            try:
+                self._container.ingest.remove_file(path_str)
+                self._log_append(f"✕ Removido do índice: {Path(path_str).name}")
+            except Exception as exc:
+                errors.append(f"{Path(path_str).name}: {exc}")
+        if errors:
+            QMessageBox.critical(self, "Erro ao remover", "\n".join(errors))
+        self._trigger_scan()
 
     # ── Ingestão ──────────────────────────────────────────────────────────────
 
