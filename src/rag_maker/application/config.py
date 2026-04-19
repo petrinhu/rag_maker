@@ -16,11 +16,13 @@ def _xdg_config_file() -> Path:
 
 class PathsConfig(BaseModel):
     corpus_dir: Path | None = None
-    db_dir: Path | None = None  # None → ~/.local/share/rag_maker/db
+    db_dir: Path | None = None  # None → corpus_dir/rag ou ~/.local/share/rag_maker/db
 
     def resolved_db_dir(self) -> Path:
         if self.db_dir is not None:
             return self.db_dir.expanduser()
+        if self.corpus_dir is not None:
+            return self.corpus_dir.expanduser() / "rag"
         return Path.home() / ".local" / "share" / "rag_maker" / "db"
 
 
