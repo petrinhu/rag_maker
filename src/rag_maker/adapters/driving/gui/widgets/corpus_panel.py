@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 
 from rag_maker.adapters.driving.gui.workers import IngestWorker, ScanWorker
 from rag_maker.application.ingest_use_case import ChangeReport, IngestReport
-from rag_maker.composition.container import Container
+from rag_maker.composition.container import Container, set_config_value
 
 _STATUS_NEW       = ("⬆ Novo",       "#1565C0")  # azul
 _STATUS_MODIFIED  = ("↻ Modificado", "#E65100")  # laranja
@@ -149,6 +149,7 @@ class CorpusPanel(QWidget):
         folder = QFileDialog.getExistingDirectory(self, "Selecionar pasta do corpus", start_dir)
         if folder:
             self._path_edit.setText(folder)
+            set_config_value("paths.corpus_dir", folder)
             self._trigger_scan()
 
     def _corpus_dir(self) -> Path | None:
