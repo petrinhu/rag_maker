@@ -94,7 +94,7 @@ class SettingsPanel(QWidget):
         cfg = self._config
         str_map: dict[str, str] = {
             "paths.corpus_dir": str(cfg.paths.corpus_dir) if cfg.paths.corpus_dir else "",
-            "paths.db_dir": str(cfg.paths.db_dir),
+            "paths.db_dir": str(cfg.paths.resolved_db_dir()),
             "ollama.url": detect_ollama_url(),
             "ollama.embedding_model": cfg.ollama.embedding_model,
             "reranker.model": cfg.reranker.model,
@@ -121,6 +121,11 @@ class SettingsPanel(QWidget):
         widget = self._fields.get("ollama.url")
         if isinstance(widget, QLineEdit):
             widget.setText(url)
+
+    def set_corpus_dir(self, path: str) -> None:
+        widget = self._fields.get("paths.corpus_dir")
+        if isinstance(widget, QLineEdit) and path:
+            widget.setText(path)
 
     def _save(self) -> None:
         try:

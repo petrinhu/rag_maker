@@ -26,7 +26,8 @@ from rag_maker.composition.container import Container
 
 
 class CorpusPanel(QWidget):
-    ingest_done = Signal(object)  # IngestReport
+    ingest_done = Signal(object)         # IngestReport
+    corpus_dir_changed = Signal(str)     # novo caminho do corpus
 
     def __init__(self, container: Container, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -48,6 +49,7 @@ class CorpusPanel(QWidget):
         self._path_edit.setPlaceholderText("Selecione a pasta com os seus documentos…")
         if self._container.config.paths.corpus_dir:
             self._path_edit.setText(str(self._container.config.paths.corpus_dir))
+        self._path_edit.textChanged.connect(self.corpus_dir_changed)
         browse_btn = QPushButton("Selecionar…")
         browse_btn.clicked.connect(self._browse)
         path_layout.addWidget(self._path_edit, stretch=1)

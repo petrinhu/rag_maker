@@ -8,10 +8,6 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-def _default_db_dir() -> Path:
-    return Path.home() / ".local" / "share" / "rag_maker" / "db"
-
-
 def _xdg_config_file() -> Path:
     xdg = os.environ.get("XDG_CONFIG_HOME")
     base = Path(xdg) if xdg else Path.home() / ".config"
@@ -20,7 +16,14 @@ def _xdg_config_file() -> Path:
 
 class PathsConfig(BaseModel):
     corpus_dir: Path | None = None
-    db_dir: Path = Field(default_factory=_default_db_dir)
+    db_dir: Path | None = None  # None → corpus_dir/rag, ou ~/.local/share/rag_maker/db
+
+    def resolved_db_dir(self) -> Path:
+        if self.db_dir is not None:
+            return self.db_dir.expanduser()
+        if self.corpus_dir is not None:
+            return self.corpus_dir.expanduser() / "rag"
+        return Path.home() / ".local" / "share" / "rag_maker" / "db"
 
 
 class OllamaConfig(BaseModel):

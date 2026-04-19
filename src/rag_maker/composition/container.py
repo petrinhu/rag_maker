@@ -78,12 +78,12 @@ def ensure_ollama_ready(config: AppConfig) -> None:
 
 def get_store_stats(config: AppConfig) -> StoreStats:
     """Lê estatísticas do banco sem precisar do Ollama."""
-    meta = _load_meta(config.paths.db_dir)
+    meta = _load_meta(config.paths.resolved_db_dir())
     dim: int | None = config.embedding_dim or meta.get("embedding_dim")
     if dim is None:
         return StoreStats(initialized=False, chunk_count=None, embedding_dim=None)
     try:
-        store = LanceVectorStore(db_path=config.paths.db_dir, embedding_dim=dim)
+        store = LanceVectorStore(db_path=config.paths.resolved_db_dir(), embedding_dim=dim)
         return StoreStats(initialized=True, chunk_count=store.count(), embedding_dim=dim)
     except Exception:
         return StoreStats(initialized=False, chunk_count=None, embedding_dim=dim)
@@ -207,14 +207,14 @@ def build_container(
     if store is not None:
         _store = store
     else:
-        meta = _load_meta(config.paths.db_dir)
+        meta = _load_meta(config.paths.resolved_db_dir())
         dim: int = config.embedding_dim or meta.get("embedding_dim") or len(
             _embedder.embed("dim probe")
         )
         if meta.get("embedding_dim") != dim:
-            _save_meta(config.paths.db_dir, {**meta, "embedding_dim": dim})
+            _save_meta(config.paths.resolved_db_dir(), {**meta, "embedding_dim": dim})
         config = config.model_copy(update={"embedding_dim": dim})
-        _store = LanceVectorStore(db_path=config.paths.db_dir, embedding_dim=dim)
+        _store = LanceVectorStore(db_path=config.paths.resolved_db_dir(), embedding_dim=dim)
 
     _reranker: RerankerPort = reranker or CrossEncoderReranker(
         model_name=config.reranker.model,

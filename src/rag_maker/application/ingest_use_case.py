@@ -57,7 +57,8 @@ class IngestUseCase:
             size=config.chunking.size,
             overlap=config.chunking.overlap,
         )
-        self._manifest_path = config.paths.db_dir / "manifest.json"
+        self._manifest_path = config.paths.resolved_db_dir() / "manifest.json"
+        self._db_dir = config.paths.resolved_db_dir()
 
     # ── Manifest ──────────────────────────────────────────────────────────────
 
@@ -84,9 +85,17 @@ class IngestUseCase:
 
     # ── Change detection ──────────────────────────────────────────────────────
 
+    def _is_loadable(self, path: Path) -> bool:
+        try:
+            self._loader_for(path)
+            return True
+        except Exception:
+            return False
+
     def scan_changes(self, corpus_dir: Path) -> ChangeReport:
         manifest = self._load_manifest()
-        ignored = {str(p) for p in self._config.ignored.paths}
+        db_dir_str = str(self._db_dir)
+        ignored = {str(p) for p in self._config.ignored.paths} | {db_dir_str}
         report = ChangeReport()
         seen: set[str] = set()
 
@@ -94,6 +103,8 @@ class IngestUseCase:
             if not path.is_file():
                 continue
             if any(str(path).startswith(ig) for ig in ignored):
+                continue
+            if not self._is_loadable(path):
                 continue
             key = str(path)
             seen.add(key)

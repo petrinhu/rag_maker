@@ -6,13 +6,17 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QStatusBar,
     QTabWidget,
-    QWidget,
 )
 
 from rag_maker.adapters.driving.gui.widgets.corpus_panel import CorpusPanel
 from rag_maker.adapters.driving.gui.widgets.query_panel import QueryPanel
 from rag_maker.adapters.driving.gui.widgets.settings_panel import SettingsPanel
-from rag_maker.composition.container import Container, StoreStats, get_store_stats, ollama_is_running
+from rag_maker.composition.container import (
+    Container,
+    StoreStats,
+    get_store_stats,
+    ollama_is_running,
+)
 
 
 class MainWindow(QMainWindow):
@@ -28,9 +32,11 @@ class MainWindow(QMainWindow):
         tabs = QTabWidget()
         self._corpus_panel = CorpusPanel(self._container)
         self._corpus_panel.ingest_done.connect(self._refresh_status)
+        self._settings_panel = SettingsPanel()
+        self._corpus_panel.corpus_dir_changed.connect(self._settings_panel.set_corpus_dir)
         tabs.addTab(self._corpus_panel, "Corpus")
         tabs.addTab(QueryPanel(self._container), "Consulta")
-        tabs.addTab(SettingsPanel(), "Configurações")
+        tabs.addTab(self._settings_panel, "Configurações")
         self.setCentralWidget(tabs)
 
         bar = QStatusBar()

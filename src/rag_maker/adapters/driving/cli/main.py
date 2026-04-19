@@ -5,7 +5,7 @@ import shutil
 import sys
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -27,7 +27,6 @@ from rag_maker.composition.container import (
 )
 from rag_maker.domain.models import (
     EmbeddingError,
-    LoadError,
     ModelNotFoundError,
     OllamaUnavailableError,
 )
@@ -93,7 +92,7 @@ def _version_cb(value: bool) -> None:
 @app.callback()
 def _root(
     _version: Annotated[
-        Optional[bool],
+        bool | None,
         typer.Option("--version", callback=_version_cb, is_eager=True, help="Exibir versão."),
     ] = None,
 ) -> None:
@@ -116,7 +115,7 @@ def status(
         "version": _pkg_version("rag-maker"),
         "config_path": str(get_config_path()),
         "corpus_dir": str(config.paths.corpus_dir) if config.paths.corpus_dir else None,
-        "db_dir": str(config.paths.db_dir),
+        "db_dir": str(config.paths.resolved_db_dir()),
         "ollama": {
             "url": config.ollama.url,
             "model": config.ollama.embedding_model,
@@ -137,7 +136,7 @@ def status(
     t.add_row("Versão", _pkg_version("rag-maker"))
     t.add_row("Config", str(get_config_path()))
     t.add_row("Corpus dir", str(config.paths.corpus_dir or "[dim]não configurado[/dim]"))
-    t.add_row("DB dir", str(config.paths.db_dir))
+    t.add_row("DB dir", str(config.paths.resolved_db_dir()))
     t.add_row("Ollama", "[green]online[/green]" if running else "[red]offline[/red]")
     t.add_row("Modelo", config.ollama.embedding_model)
     t.add_row(
@@ -152,7 +151,7 @@ def status(
 
 @app.command()
 def ingest(
-    corpus: Annotated[Optional[Path], typer.Option("--corpus", help="Pasta do corpus.")] = None,
+    corpus: Annotated[Path | None, typer.Option("--corpus", help="Pasta do corpus.")] = None,
     full: Annotated[bool, typer.Option("--full", help="Recriar índice do zero.")] = False,
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Confirmar sem prompt.")] = False,
     as_json: Annotated[bool, typer.Option("--json", help="Saída em JSON.")] = False,
@@ -224,8 +223,8 @@ def ingest(
 @app.command()
 def query(
     text: Annotated[str, typer.Argument(help="Consulta em linguagem natural.")],
-    top_k: Annotated[Optional[int], typer.Option("--top-k", help="Número de chunks.")] = None,
-    alpha: Annotated[Optional[float], typer.Option("--alpha", help="Peso dense vs lexical.")] = None,
+    top_k: Annotated[int | None, typer.Option("--top-k", help="Número de chunks.")] = None,
+    alpha: Annotated[float | None, typer.Option("--alpha", help="Peso dense vs lexical.")] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Saída em JSON.")] = False,
 ) -> None:
     """Consultar o índice e retornar trechos ranqueados."""
@@ -294,7 +293,7 @@ def query(
 
 @config_app.command("get")
 def config_get(
-    key: Annotated[Optional[str], typer.Argument(help="Chave (ex: ollama.url).")] = None,
+    key: Annotated[str | None, typer.Argument(help="Chave (ex: ollama.url).")] = None,
 ) -> None:
     """Exibir configuração atual."""
     if key is None:
@@ -405,7 +404,7 @@ def doctor() -> None:
     checks.append(("corpus_dir", corpus_ok, str(config.paths.corpus_dir or "não configurado")))
 
     # db_dir writable
-    db_dir = config.paths.db_dir
+    db_dir = config.paths.resolved_db_dir()
     try:
         db_dir.mkdir(parents=True, exist_ok=True)
         db_ok = db_dir.is_dir()
