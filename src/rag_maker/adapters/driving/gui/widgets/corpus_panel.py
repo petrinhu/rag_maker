@@ -42,7 +42,11 @@ def _is_dark() -> bool:
     app = QApplication.instance()
     if not isinstance(app, QApplication):
         return False
-    return app.palette().color(QPalette.ColorRole.Window).lightness() < 128
+    try:
+        from PySide6.QtCore import Qt
+        return app.styleHints().colorScheme() == Qt.ColorScheme.Dark
+    except AttributeError:
+        return app.palette().color(QPalette.ColorRole.Window).lightness() < 128
 
 
 def _status_styles() -> dict[str, tuple[str, QColor]]:
