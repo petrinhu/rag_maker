@@ -181,6 +181,9 @@ class CorpusPanel(QWidget):
         self._file_progress_bar.setToolTip("Progresso por arquivo: chunks sendo embutidos")
         self._file_progress_bar.setTextVisible(False)
         root.addWidget(self._file_progress_bar)
+        self._chunk_label = QLabel("")
+        self._chunk_label.setVisible(False)
+        root.addWidget(self._chunk_label)
 
         # ── Tabela de obras ──────────────────────────────────────────────────
         files_group = QGroupBox("Obras do corpus")
@@ -541,6 +544,7 @@ class CorpusPanel(QWidget):
     def _on_file_progress(self, current: int, total: int) -> None:
         self._file_progress_bar.setMaximum(total)
         self._file_progress_bar.setValue(current)
+        self._chunk_label.setText(f"chunk {current} de {total}")
 
     def _on_file_result(self, filename: str, ok: bool, msg: str) -> None:
         if ok:
@@ -604,12 +608,14 @@ class CorpusPanel(QWidget):
         self._progress_bar.setVisible(busy)
         self._progress_label.setVisible(busy)
         self._file_progress_bar.setVisible(busy)
+        self._chunk_label.setVisible(busy)
         self._pause_btn.setVisible(busy)
         self._stop_btn.setVisible(busy)
         if not busy:
             self._progress_label.setText("")
             self._pause_btn.setText("Pausar")
             self._file_progress_bar.setValue(0)
+            self._chunk_label.setText("")
 
     def _log_append(self, msg: str) -> None:
         self._log.append(msg)
