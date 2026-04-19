@@ -123,5 +123,5 @@ Referências:
 | F7.3 | Polimento | `README.md` (quickstart humano, stack, screenshots da GUI, troubleshooting, link para AGENTS.md) | Média | F5.10, F6.10 | Baixa | ✅ Concluído | ✓ |
 | F7.4 | Polimento | `.pre-commit-config.yaml` (ruff check/format + mypy + bandit + lint-imports + pytest unit curto) | Baixa | F1.6, F1.7, F1.13, F1.14 | Baixa | ✅ Concluído | ✓ |
 | F7.5 | Distribuição | `uv build` → wheel + sdist em `dist/`; verificar metadata | Média | F7.4 | Baixa | ✅ Concluído | ✓ |
-| F7.6 | Distribuição | Testar `pipx install dist/*.whl` em ambiente limpo (binários `rag` e `rag-gui` no PATH) | Média | F7.5 | Baixa | 🔍 Pendente verificação | — |
+| F7.6 | Distribuição | Testar `pipx install dist/*.whl` em ambiente limpo (binários `rag` e `rag-gui` no PATH) | Média | F7.5 | Baixa | ✅ Concluído | ✓ |
 | F7.7 | Distribuição | Commit final (Conventional Commits) + tag `v0.1.0` | Média | F7.6 | Baixa | ⏳ Pendente | — |
