@@ -225,6 +225,12 @@ class CorpusPanel(QWidget):
 
         self._file_table.setSortingEnabled(True)
 
+        db_dir = self._container.config.paths.resolved_db_dir()
+        if db_dir.exists():
+            self._log_append(f"Banco de dados rag encontrado em: {db_dir}")
+        else:
+            self._log_append(f"Banco de dados ainda não existe em: {db_dir}")
+
         if n_new or n_modified:
             self._log_append(
                 f"Scan concluído: {n_new} nova(s), {n_modified} modificada(s), "
