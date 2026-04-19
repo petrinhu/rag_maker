@@ -5,6 +5,8 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QStatusBar,
+    QStyle,
+    QSystemTrayIcon,
     QTabWidget,
 )
 
@@ -25,13 +27,16 @@ class MainWindow(QMainWindow):
         self._container = container
         self.setWindowTitle("rag-maker")
         self.resize(900, 650)
+        self._tray: QSystemTrayIcon | None = None
         self._build_ui()
+        self._setup_tray()
         self._start_status_timer()
 
     def _build_ui(self) -> None:
         tabs = QTabWidget()
         self._corpus_panel = CorpusPanel(self._container)
         self._corpus_panel.ingest_done.connect(self._refresh_status)
+        self._corpus_panel.notification_requested.connect(self._show_notification)
         self._settings_panel = SettingsPanel()
         self._corpus_panel.corpus_dir_changed.connect(self._settings_panel.set_corpus_dir)
         tabs.addTab(self._corpus_panel, "Corpus")
@@ -46,6 +51,18 @@ class MainWindow(QMainWindow):
         bar.addPermanentWidget(QLabel(" | "))
         bar.addPermanentWidget(self._chunks_label)
         self.setStatusBar(bar)
+
+    def _setup_tray(self) -> None:
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            return
+        self._tray = QSystemTrayIcon(self)
+        icon = self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
+        self._tray.setIcon(icon)
+        self._tray.show()
+
+    def _show_notification(self, title: str, msg: str) -> None:
+        if self._tray is not None:
+            self._tray.showMessage(title, msg, QSystemTrayIcon.MessageIcon.Information, 5000)
 
     def _start_status_timer(self) -> None:
         self._refresh_status()

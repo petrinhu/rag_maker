@@ -59,6 +59,10 @@ class IgnoredConfig(BaseModel):
     paths: list[Path] = Field(default_factory=list)
 
 
+class GuiConfig(BaseModel):
+    recursive_scan: bool = True
+
+
 class AppConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="RAG_MAKER_",
@@ -72,6 +76,7 @@ class AppConfig(BaseSettings):
     reranker: RerankerConfig = Field(default_factory=RerankerConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     ignored: IgnoredConfig = Field(default_factory=IgnoredConfig)
+    gui: GuiConfig = Field(default_factory=GuiConfig)
     embedding_dim: int | None = None  # preenchido em runtime após primeiro embed
 
     @classmethod
