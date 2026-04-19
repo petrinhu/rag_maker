@@ -51,9 +51,9 @@ class MainWindow(QMainWindow):
     def _refresh_status(self, *_: object) -> None:
         running = ollama_is_running(self._container.config)
         self._ollama_label.setText(
-            "Ollama: <font color='green'>online</font>"
+            "Ollama: <font color='#1B5E20'>online</font>"
             if running
-            else "Ollama: <font color='red'>offline</font>"
+            else "Ollama: <font color='#8B0000'>offline</font>"
         )
         stats: StoreStats = get_store_stats(self._container.config)
         count = stats.chunk_count if stats.chunk_count is not None else "—"

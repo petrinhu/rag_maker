@@ -117,7 +117,7 @@ Referências:
 | F6.7 | GUI Qt6 | `adapters/driving/gui/widgets/settings_panel.py`: form para editar TOML (paths, chunking, retrieval, reranker) | Média | F6.3, F2.9 | Média | ✅ Concluído | ✓ |
 | F6.8 | GUI Qt6 | StatusBar com estado do Ollama (verde/amarelo/vermelho) + modelo carregado + contador de chunks no banco | Média | F6.3 | Baixa | ✅ Concluído | ✓ |
 | F6.9 | GUI Qt6 | Entry point `rag-gui` no `pyproject.toml` (`[project.scripts]`) | Média | F1.4 | Baixa | ✅ Concluído | ✓ |
-| F6.10 | GUI Qt6 | Smoke test manual (WCAG AA: contraste, navegação por teclado, focus visível): abrir, ingerir mini corpus, rodar query | Média | F6.9 | Baixa | 🔍 Pendente verificação | — |
+| F6.10 | GUI Qt6 | Smoke test manual (WCAG AA: contraste, navegação por teclado, focus visível): abrir, ingerir mini corpus, rodar query | Média | F6.9 | Baixa | ✅ Concluído | ✓ |
 | F7.1 | Polimento | Shell completion Typer (`rag --install-completion`) | Baixa | F5.1 | Baixa | ✅ Concluído | ✓ |
 | F7.2 | Polimento | `scripts/benchmark_retrieval.py` (latência por etapa do pipeline: embed/search/rerank) | Baixa | F4.3 | Média | ✅ Concluído | ✓ |
 | F7.3 | Polimento | `README.md` (quickstart humano, stack, screenshots da GUI, troubleshooting, link para AGENTS.md) | Média | F5.10, F6.10 | Baixa | ✅ Concluído | ✓ |
