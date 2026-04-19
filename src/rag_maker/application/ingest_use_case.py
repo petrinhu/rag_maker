@@ -92,14 +92,15 @@ class IngestUseCase:
         except Exception:
             return False
 
-    def scan_changes(self, corpus_dir: Path) -> ChangeReport:
+    def scan_changes(self, corpus_dir: Path, recursive: bool = True) -> ChangeReport:
         manifest = self._load_manifest()
         db_dir_str = str(self._db_dir)
         ignored = {str(p) for p in self._config.ignored.paths} | {db_dir_str}
         report = ChangeReport()
         seen: set[str] = set()
 
-        for path in sorted(corpus_dir.rglob("*")):
+        glob_fn = corpus_dir.rglob if recursive else corpus_dir.glob
+        for path in sorted(glob_fn("*")):
             if not path.is_file():
                 continue
             if any(str(path).startswith(ig) for ig in ignored):
@@ -138,9 +139,10 @@ class IngestUseCase:
         self,
         corpus_dir: Path,
         on_progress: ProgressFn | None = None,
+        recursive: bool = True,
     ) -> IngestReport:
         t0 = time.monotonic()
-        changes = self.scan_changes(corpus_dir)
+        changes = self.scan_changes(corpus_dir, recursive=recursive)
         manifest = self._load_manifest()
         report = IngestReport()
         new_set = {str(p) for p in changes.new}
@@ -176,6 +178,7 @@ class IngestUseCase:
         self,
         corpus_dir: Path,
         on_progress: ProgressFn | None = None,
+        recursive: bool = True,
     ) -> IngestReport:
         t0 = time.monotonic()
         manifest = self._load_manifest()
@@ -183,7 +186,7 @@ class IngestUseCase:
             self._store.delete_by_source(source_path)
         manifest.clear()
         self._save_manifest(manifest)
-        report = self.ingest_incremental(corpus_dir, on_progress=on_progress)
+        report = self.ingest_incremental(corpus_dir, on_progress=on_progress, recursive=recursive)
         report.elapsed_ms = (time.monotonic() - t0) * 1000
         return report
 

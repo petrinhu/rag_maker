@@ -5,6 +5,7 @@ from pathlib import Path
 from PySide6.QtCore import QStandardPaths, Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
+    QCheckBox,
     QFileDialog,
     QGroupBox,
     QHBoxLayout,
@@ -68,6 +69,14 @@ class CorpusPanel(QWidget):
         path_layout.addWidget(browse_btn)
         path_layout.addWidget(self._scan_btn)
         root.addWidget(path_group)
+
+        self._recursive_chk = QCheckBox("Incluir subpastas")
+        self._recursive_chk.setChecked(True)
+        self._recursive_chk.setToolTip(
+            "Marcado: varre a pasta do corpus e todas as suas subpastas recursivamente.\n"
+            "Desmarcado: considera apenas os arquivos na raiz da pasta selecionada."
+        )
+        root.addWidget(self._recursive_chk)
 
         # ── Resumo + ações ───────────────────────────────────────────────────
         action_row = QHBoxLayout()
@@ -154,7 +163,7 @@ class CorpusPanel(QWidget):
             return
         self._scan_btn.setEnabled(False)
         self._summary_label.setText("Analisando…")
-        self._scan_worker = ScanWorker(self._container.ingest, corpus)
+        self._scan_worker = ScanWorker(self._container.ingest, corpus, recursive=self._recursive_chk.isChecked())
         self._scan_worker.finished.connect(self._on_scan_done)
         self._scan_worker.error.connect(self._on_scan_error)
         self._scan_worker.start()
@@ -288,7 +297,7 @@ class CorpusPanel(QWidget):
         self._set_busy(True)
         self._progress_bar.setValue(0)
         self._log_append(f"{'Reconstruindo' if full else 'Ingerindo'} corpus: {corpus}")
-        self._ingest_worker = IngestWorker(self._container, corpus, full=full)
+        self._ingest_worker = IngestWorker(self._container, corpus, full=full, recursive=self._recursive_chk.isChecked())
         self._ingest_worker.progress.connect(self._on_progress)
         self._ingest_worker.finished.connect(self._on_ingest_done)
         self._ingest_worker.error.connect(self._on_ingest_error)

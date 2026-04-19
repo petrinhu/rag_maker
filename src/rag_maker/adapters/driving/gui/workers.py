@@ -15,11 +15,12 @@ class IngestWorker(QThread):
     error = Signal(str)
     progress = Signal(str, int, int)  # filename, current, total
 
-    def __init__(self, container: Container, corpus_dir: Path, full: bool = False) -> None:
+    def __init__(self, container: Container, corpus_dir: Path, full: bool = False, recursive: bool = True) -> None:
         super().__init__()
         self._container = container
         self._corpus_dir = corpus_dir
         self._full = full
+        self._recursive = recursive
 
     def run(self) -> None:
         def _on_progress(filename: str, current: int, total: int) -> None:
@@ -28,11 +29,11 @@ class IngestWorker(QThread):
         try:
             if self._full:
                 report: IngestReport = self._container.ingest.recreate_all(
-                    self._corpus_dir, on_progress=_on_progress
+                    self._corpus_dir, on_progress=_on_progress, recursive=self._recursive
                 )
             else:
                 report = self._container.ingest.ingest_incremental(
-                    self._corpus_dir, on_progress=_on_progress
+                    self._corpus_dir, on_progress=_on_progress, recursive=self._recursive
                 )
             self.finished.emit(report)
         except Exception as exc:
@@ -43,14 +44,15 @@ class ScanWorker(QThread):
     finished = Signal(object)  # ChangeReport
     error = Signal(str)
 
-    def __init__(self, ingest_uc: IngestUseCase, corpus_dir: Path) -> None:
+    def __init__(self, ingest_uc: IngestUseCase, corpus_dir: Path, recursive: bool = True) -> None:
         super().__init__()
         self._ingest_uc = ingest_uc
         self._corpus_dir = corpus_dir
+        self._recursive = recursive
 
     def run(self) -> None:
         try:
-            report: ChangeReport = self._ingest_uc.scan_changes(self._corpus_dir)
+            report: ChangeReport = self._ingest_uc.scan_changes(self._corpus_dir, recursive=self._recursive)
             self.finished.emit(report)
         except Exception as exc:
             self.error.emit(str(exc))
