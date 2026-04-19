@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import types
 
@@ -7,6 +8,17 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from rag_maker.adapters.driving.gui.main_window import MainWindow
 from rag_maker.composition.container import build_container
+
+
+def _ensure_platform_theme() -> None:
+    """Define QT_QPA_PLATFORMTHEME se não estiver no ambiente (binário instalado)."""
+    if "QT_QPA_PLATFORMTHEME" in os.environ:
+        return
+    desktop = os.environ.get("XDG_CURRENT_DESKTOP", "").upper()
+    if "KDE" in desktop:
+        os.environ["QT_QPA_PLATFORMTHEME"] = "kde"
+    elif any(d in desktop for d in ("GNOME", "UNITY", "BUDGIE", "CINNAMON")):
+        os.environ["QT_QPA_PLATFORMTHEME"] = "gnome"
 
 
 def _global_except_hook(
@@ -21,6 +33,7 @@ def _global_except_hook(
 
 
 def main() -> None:
+    _ensure_platform_theme()
     app = QApplication(sys.argv)
     app.setApplicationName("rag-maker")
     app.setApplicationVersion("0.1.0")
