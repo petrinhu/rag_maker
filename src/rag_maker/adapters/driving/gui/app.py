@@ -72,6 +72,9 @@ def _global_except_hook(
 
 
 def main() -> None:
+    import logging
+    logging.getLogger("pypdf").setLevel(logging.ERROR)
+
     _ensure_platform_theme()
     app = QApplication(sys.argv)
     app.setApplicationName("rag-maker")

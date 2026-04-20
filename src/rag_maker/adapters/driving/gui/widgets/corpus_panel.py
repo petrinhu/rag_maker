@@ -83,8 +83,8 @@ class CorpusPanel(QWidget):
         self._scan_worker: ScanWorker | None = None
         self._active_status_filter: str | None = None
         self._ingest_start_time: float = 0.0
-        self._eta_end: float = 0.0
-        self._pause_start: float = 0.0
+        self._file_start_time: float = 0.0
+        self._eta_remaining: float = 0.0
         self._last_filename: str = ""
         self._last_current: int = 0
         self._last_total: int = 0
@@ -164,9 +164,6 @@ class CorpusPanel(QWidget):
         progress_row.addWidget(self._pause_btn)
         progress_row.addWidget(self._stop_btn)
         root.addLayout(progress_row)
-        self._progress_label = QLabel("")
-        self._progress_label.setVisible(False)
-        root.addWidget(self._progress_label)
 
         self._file_progress_bar = QProgressBar()
         self._file_progress_bar.setVisible(False)
@@ -174,6 +171,11 @@ class CorpusPanel(QWidget):
         self._file_progress_bar.setToolTip("Progresso por arquivo: chunks sendo embutidos")
         self._file_progress_bar.setTextVisible(False)
         root.addWidget(self._file_progress_bar)
+
+        # Ambos os labels ficam abaixo da barra fina
+        self._progress_label = QLabel("")
+        self._progress_label.setVisible(False)
+        root.addWidget(self._progress_label)
         self._chunk_label = QLabel("")
         self._chunk_label.setVisible(False)
         root.addWidget(self._chunk_label)
@@ -500,6 +502,8 @@ class CorpusPanel(QWidget):
         self._set_busy(True)
         self._progress_bar.setValue(0)
         self._ingest_start_time = time.monotonic()
+        self._file_start_time = self._ingest_start_time
+        self._eta_remaining = 0.0
         self._log_append(f"{'Reconstruindo' if full else 'Ingerindo'} corpus: {corpus}")
         self._ingest_worker = IngestWorker(
             self._container, corpus, full=full, recursive=self._recursive_chk.isChecked()
@@ -522,34 +526,37 @@ class CorpusPanel(QWidget):
         self._last_total    = total
         self._chunk_current = 0
         self._chunk_total   = 1
+        self._file_start_time = time.monotonic()
         if not self._eta_timer.isActive():
             self._eta_timer.start()
-        self._recompute_eta()
-        self._tick_eta()
+        self._refresh_labels()
 
     def _on_file_progress(self, current: int, total: int) -> None:
         self._file_progress_bar.setMaximum(total)
         self._file_progress_bar.setValue(current)
-        self._chunk_label.setText(f"chunk {current} de {total}")
         self._chunk_current = current
         self._chunk_total   = max(total, 1)
-        self._recompute_eta()
-
-    def _recompute_eta(self) -> None:
-        """Recalcula _eta_end usando progresso de chunks como fração do arquivo atual."""
-        elapsed = time.monotonic() - self._ingest_start_time
-        cur, tot = self._last_current, self._last_total
-        effective_done = (cur - 1) + self._chunk_current / self._chunk_total
-        effective_remaining = tot - effective_done
-        if effective_done > 0.05 and elapsed > 0.5 and effective_remaining > 0:
-            rate = elapsed / effective_done          # segundos por arquivo-equivalente
-            self._eta_end = time.monotonic() + rate * effective_remaining
+        self._refresh_labels()
 
     def _tick_eta(self) -> None:
-        remaining = self._eta_end - time.monotonic()
-        eta_part  = f"  ETA: {_fmt_eta(remaining)}" if remaining > 1 else ""
+        """ETA por arquivo: rate = chunks_done / file_elapsed; eta = (total - done) / rate."""
+        file_elapsed = time.monotonic() - self._file_start_time
+        if file_elapsed > 1.0 and self._chunk_current > 0 and self._chunk_current < self._chunk_total:
+            rate = self._chunk_current / file_elapsed
+            self._eta_remaining = (self._chunk_total - self._chunk_current) / rate
+        elif self._chunk_current >= self._chunk_total:
+            self._eta_remaining = 0.0
+        self._refresh_labels()
+
+    def _refresh_labels(self) -> None:
+        eta_part = f"  ETA: {_fmt_eta(self._eta_remaining)}" if self._eta_remaining > 1 else ""
+        file_elapsed = time.monotonic() - self._file_start_time if self._file_start_time > 0 else 0.0
+        elapsed_part = f"  decorrido: {_fmt_eta(file_elapsed)}" if file_elapsed > 0 else ""
         self._progress_label.setText(
-            f"[{self._last_current}/{self._last_total}] {self._last_filename}{eta_part}"
+            f"[{self._last_current}/{self._last_total}] {self._last_filename}"
+        )
+        self._chunk_label.setText(
+            f"chunk {self._chunk_current} de {self._chunk_total}{elapsed_part}{eta_part}"
         )
 
     def _on_file_result(self, filename: str, ok: bool, msg: str) -> None:
@@ -560,13 +567,11 @@ class CorpusPanel(QWidget):
 
     def _on_paused(self) -> None:
         self._pause_btn.setText("Continuar")
-        self._pause_start = time.monotonic()
         self._eta_timer.stop()
         self._progress_label.setText("Em pausa...")
 
     def _on_resumed(self) -> None:
         self._pause_btn.setText("Pausar")
-        self._eta_end += time.monotonic() - self._pause_start
         self._eta_timer.start()
 
     def _on_ingest_done(self, report: IngestReport) -> None:
