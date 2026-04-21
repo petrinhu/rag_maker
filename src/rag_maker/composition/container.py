@@ -72,11 +72,11 @@ class Container:
 
         new_store = LanceVectorStore(db_path=new_db_dir, embedding_dim=dim_for_store)
 
-        set_config_value("paths.corpus_dir", str(new_corpus_dir))
-        set_config_value("paths.db_dir", str(new_db_dir))
-
-        new_config = AppConfig.from_file().model_copy(
-            update={"embedding_dim": dim_for_store}
+        new_paths = self.config.paths.model_copy(
+            update={"corpus_dir": new_corpus_dir, "db_dir": new_db_dir}
+        )
+        new_config = self.config.model_copy(
+            update={"paths": new_paths, "embedding_dim": dim_for_store}
         )
 
         new_ingest = IngestUseCase(
@@ -91,6 +91,9 @@ class Container:
             reranker=self.reranker,
             config=new_config,
         )
+
+        set_config_value("paths.corpus_dir", str(new_corpus_dir))
+        set_config_value("paths.db_dir", str(new_db_dir))
 
         self.config = new_config
         self.store = new_store
