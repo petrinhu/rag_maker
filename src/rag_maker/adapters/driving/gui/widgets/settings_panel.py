@@ -101,12 +101,13 @@ class SettingsPanel(QWidget):
         cfg_path_label.setWordWrap(True)
         outer.addWidget(cfg_path_label)
 
-    def _populate(self) -> None:
+    def _populate(self, *, probe_network: bool = True) -> None:
         cfg = self._config
+        ollama_url = detect_ollama_url() if probe_network else cfg.ollama.url
         str_map: dict[str, str] = {
             "paths.corpus_dir": str(cfg.paths.corpus_dir) if cfg.paths.corpus_dir else "",
             "paths.db_dir": str(cfg.paths.resolved_db_dir()),
-            "ollama.url": detect_ollama_url(),
+            "ollama.url": ollama_url,
             "ollama.embedding_model": cfg.ollama.embedding_model,
             "reranker.model": cfg.reranker.model,
             "reranker.device": cfg.reranker.device,
@@ -167,4 +168,4 @@ class SettingsPanel(QWidget):
             self._config = AppConfig.from_file()
         except Exception:
             self._config = AppConfig()
-        self._populate()
+        self._populate(probe_network=False)
