@@ -28,6 +28,76 @@ class Container:
     ingest: IngestUseCase
     query: QueryUseCase
 
+    def rebind_to_corpus(self, new_corpus_dir: Path) -> bool:
+        """Aponta o container para um novo corpus.
+
+        Cria ``{new_corpus_dir}/rag`` se não existir, reaproveita o banco
+        existente se compatível, persiste os novos paths no TOML e substitui
+        store + use cases. Embedder e reranker permanecem.
+
+        Returns:
+            True  se a troca foi efetivada.
+            False se ``new_corpus_dir`` é igual ao corpus atual (no-op).
+
+        Raises:
+            ValueError: pasta não existe ou dim do banco existente é
+                incompatível com a dim atual.
+            PermissionError / OSError: falha ao criar ``rag/``.
+        """
+        new_corpus_dir = new_corpus_dir.expanduser().resolve()
+        if not new_corpus_dir.is_dir():
+            raise ValueError(f"Pasta do corpus nao encontrada: {new_corpus_dir}")
+
+        current = self.config.paths.corpus_dir
+        if current is not None and current.expanduser().resolve() == new_corpus_dir:
+            return False
+
+        new_db_dir = new_corpus_dir / "rag"
+        new_db_dir.mkdir(parents=True, exist_ok=True)
+
+        current_dim = self.config.embedding_dim
+        meta = _load_meta(new_db_dir)
+        meta_dim = meta.get("embedding_dim")
+        if meta_dim is not None and current_dim is not None and meta_dim != current_dim:
+            raise ValueError(
+                f"Banco em {new_db_dir} usa embedding dim={meta_dim}; "
+                f"atual e {current_dim}. Escolha outra pasta ou reconstrua manualmente."
+            )
+
+        dim_for_store = current_dim or meta_dim
+        if dim_for_store is None:
+            raise ValueError(
+                "Nenhuma embedding_dim conhecida; ingestao precisa ocorrer pelo menos uma vez."
+            )
+
+        new_store = LanceVectorStore(db_path=new_db_dir, embedding_dim=dim_for_store)
+
+        set_config_value("paths.corpus_dir", str(new_corpus_dir))
+        set_config_value("paths.db_dir", str(new_db_dir))
+
+        new_config = AppConfig.from_file().model_copy(
+            update={"embedding_dim": dim_for_store}
+        )
+
+        new_ingest = IngestUseCase(
+            embedder=self.embedder,
+            store=new_store,
+            loader_for=_loader_for,
+            config=new_config,
+        )
+        new_query = QueryUseCase(
+            embedder=self.embedder,
+            store=new_store,
+            reranker=self.reranker,
+            config=new_config,
+        )
+
+        self.config = new_config
+        self.store = new_store
+        self.ingest = new_ingest
+        self.query = new_query
+        return True
+
 
 @dataclass
 class StoreStats:
