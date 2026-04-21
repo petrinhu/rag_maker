@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
+    QMessageBox,
     QStatusBar,
     QStyle,
     QSystemTrayIcon,
@@ -38,7 +41,8 @@ class MainWindow(QMainWindow):
         self._corpus_panel.ingest_done.connect(self._refresh_status)
         self._corpus_panel.notification_requested.connect(self._show_notification)
         self._settings_panel = SettingsPanel()
-        self._corpus_panel.corpus_dir_changed.connect(self._settings_panel.set_corpus_dir)
+        self._corpus_panel.corpus_change_requested.connect(self._on_corpus_change_requested)
+        self._settings_panel.corpus_change_requested.connect(self._on_corpus_change_requested)
         tabs.addTab(self._corpus_panel, "Corpus")
         tabs.addTab(QueryPanel(self._container), "Consulta")
         tabs.addTab(self._settings_panel, "Configurações")
@@ -81,3 +85,29 @@ class MainWindow(QMainWindow):
         stats: StoreStats = get_store_stats(self._container.config)
         count = stats.chunk_count if stats.chunk_count is not None else "—"
         self._chunks_label.setText(f"Chunks: {count}")
+
+    def _on_corpus_change_requested(self, new_path: str) -> None:
+        """Orquestra a troca de corpus: valida busy, delega ao container,
+        atualiza ambos os panels.
+        """
+        if self._corpus_panel.is_busy():
+            QMessageBox.information(
+                self,
+                "Aguarde",
+                "Aguarde a operação em andamento terminar antes de trocar de corpus.",
+            )
+            return
+
+        try:
+            changed = self._container.rebind_to_corpus(Path(new_path))
+        except (ValueError, PermissionError, OSError) as exc:
+            QMessageBox.critical(self, "Erro ao trocar corpus", str(exc))
+            # Restaura campos para o valor real da config
+            self._corpus_panel.reload_after_rebind()
+            self._settings_panel.reload_after_rebind()
+            return
+
+        if changed:
+            self._corpus_panel.reload_after_rebind()
+            self._settings_panel.reload_after_rebind()
+            self._refresh_status()
