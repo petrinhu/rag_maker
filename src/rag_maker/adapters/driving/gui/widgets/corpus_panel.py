@@ -72,9 +72,9 @@ class _DroppableLineEdit(QLineEdit):
 
 
 class CorpusPanel(QWidget):
-    ingest_done            = Signal(object)   # IngestReport
-    corpus_dir_changed     = Signal(str)      # novo caminho do corpus
-    notification_requested = Signal(str, str) # title, message
+    ingest_done             = Signal(object)   # IngestReport
+    corpus_change_requested = Signal(str)      # usuario selecionou novo corpus
+    notification_requested  = Signal(str, str) # title, message
 
     def __init__(self, container: Container, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -110,7 +110,9 @@ class CorpusPanel(QWidget):
         self._path_edit.setPlaceholderText("Selecione ou arraste a pasta com os seus documentos…")
         if self._container.config.paths.corpus_dir:
             self._path_edit.setText(str(self._container.config.paths.corpus_dir))
-        self._path_edit.textChanged.connect(self.corpus_dir_changed)
+        self._path_edit.editingFinished.connect(
+            lambda: self.corpus_change_requested.emit(self._path_edit.text().strip())
+        )
         self._path_edit.folder_dropped.connect(self._on_folder_dropped)
         browse_btn = QPushButton("Selecionar…")
         browse_btn.clicked.connect(self._browse)
@@ -265,13 +267,10 @@ class CorpusPanel(QWidget):
         )
         folder = QFileDialog.getExistingDirectory(self, "Selecionar pasta do corpus", start_dir)
         if folder:
-            self._path_edit.setText(folder)
-            set_config_value("paths.corpus_dir", folder)
-            self._trigger_scan()
+            self.corpus_change_requested.emit(folder)
 
     def _on_folder_dropped(self, folder: str) -> None:
-        set_config_value("paths.corpus_dir", folder)
-        self._trigger_scan()
+        self.corpus_change_requested.emit(folder)
 
     def _corpus_dir(self) -> Path | None:
         text = self._path_edit.text().strip()
@@ -615,6 +614,26 @@ class CorpusPanel(QWidget):
             self._ingest_worker.stop()
 
     # ── Helpers ───────────────────────────────────────────────────────────────
+
+    def is_busy(self) -> bool:
+        """True se há worker de ingest ou scan em execução."""
+        ingest_running = self._ingest_worker is not None and self._ingest_worker.isRunning()
+        scan_running = self._scan_worker is not None and self._scan_worker.isRunning()
+        return ingest_running or scan_running
+
+    def reload_after_rebind(self) -> None:
+        """Chamado pelo MainWindow após troca de corpus: atualiza campo,
+        limpa tabela e re-scaneia.
+        """
+        new_path = str(self._container.config.paths.corpus_dir or "")
+        self._path_edit.blockSignals(True)
+        self._path_edit.setText(new_path)
+        self._path_edit.blockSignals(False)
+        self._file_table.setRowCount(0)
+        self._summary_label.setText("—")
+        self._log_append(f"Corpus trocado para: {new_path}")
+        if new_path:
+            self._trigger_scan()
 
     def _set_busy(self, busy: bool) -> None:
         self._ingest_btn.setEnabled(not busy)
