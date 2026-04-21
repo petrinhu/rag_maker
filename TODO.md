@@ -131,5 +131,5 @@ Referências:
 | F8.3 | GUI | `SettingsPanel`: signal `corpus_change_requested`, `db_dir` read-only, `_save` não grava corpus_dir/db_dir, `reload_after_rebind` | Alta | F8.1 | Média | ✅ Concluído | ✓ |
 | F8.4 | GUI | `MainWindow._on_corpus_change_requested` orquestra via busy-check, rebind, reloads condicionais, error dialog com restore | Alta | F8.2, F8.3 | Média | ✅ Concluído | ✓ |
 | F8.5 | Tests/Integration | `tests/integration/test_gui_corpus_switch.py` via pytest-qt: troca dispara update de TOML, criação de rag/, sync dos panels | Média | F8.4 | Média | ✅ Concluído | ✓ |
-| F8.6 | QA | Smoke test manual dos 3 fluxos (Corpus, Configurações, erro) + busy-block | Média | F8.5 | Baixa | ⬜ Pendente | — |
+| F8.6 | QA | Smoke test manual dos 3 fluxos (Corpus, Configurações, erro) + busy-block | Média | F8.5 | Baixa | ✅ Concluído | ✓ |
 | F8.7 | Docs | Atualizar `TODO.md` (esta fase) e garantir que `docs/superpowers/specs/` e `/plans/` estão commitados | Baixa | F8.6 | Baixa | ✅ Concluído | ✓ |
