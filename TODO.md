@@ -31,7 +31,8 @@ Referências:
 | F5 | Adapter driving: CLI + AGENTS.md | Front | 11 | Alta |
 | F6 | Adapter driving: GUI Qt6 | Front | 10 | Média |
 | F7 | Polimento + Distribuição | neutro | 7 | Média |
-| **Total** | | | **86** | |
+| F8 | Sincronização corpus↔rag GUI | Front/Mid | 7 | Média |
+| **Total** | | | **93** | |
 
 ---
 
@@ -125,3 +126,10 @@ Referências:
 | F7.5 | Distribuição | `uv build` → wheel + sdist em `dist/`; verificar metadata | Média | F7.4 | Baixa | ✅ Concluído | ✓ |
 | F7.6 | Distribuição | Testar `pipx install dist/*.whl` em ambiente limpo (binários `rag` e `rag-gui` no PATH) | Média | F7.5 | Baixa | ✅ Concluído | ✓ |
 | F7.7 | Distribuição | Commit final (Conventional Commits) + tag `v0.1.0` | Média | F7.6 | Baixa | ✅ Concluído | ✓ |
+| F8.1 | GUI/Composition | `Container.rebind_to_corpus(Path) -> bool` com testes unitários cobrindo no-op, path inválido, dim incompatível, preservação de embedding_dim | Alta | F7.7 | Média | ✅ Concluído | ✓ |
+| F8.2 | GUI | `CorpusPanel`: signal `corpus_change_requested`, métodos `is_busy()` e `reload_after_rebind()`, `editingFinished` no lugar de `textChanged` | Alta | F8.1 | Média | ✅ Concluído | ✓ |
+| F8.3 | GUI | `SettingsPanel`: signal `corpus_change_requested`, `db_dir` read-only, `_save` não grava corpus_dir/db_dir, `reload_after_rebind` | Alta | F8.1 | Média | ✅ Concluído | ✓ |
+| F8.4 | GUI | `MainWindow._on_corpus_change_requested` orquestra via busy-check, rebind, reloads condicionais, error dialog com restore | Alta | F8.2, F8.3 | Média | ✅ Concluído | ✓ |
+| F8.5 | Tests/Integration | `tests/integration/test_gui_corpus_switch.py` via pytest-qt: troca dispara update de TOML, criação de rag/, sync dos panels | Média | F8.4 | Média | ✅ Concluído | ✓ |
+| F8.6 | QA | Smoke test manual dos 3 fluxos (Corpus, Configurações, erro) + busy-block | Média | F8.5 | Baixa | ⬜ Pendente | — |
+| F8.7 | Docs | Atualizar `TODO.md` (esta fase) e garantir que `docs/superpowers/specs/` e `/plans/` estão commitados | Baixa | F8.6 | Baixa | ✅ Concluído | ✓ |
