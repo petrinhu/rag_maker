@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
@@ -18,6 +19,8 @@ from rag_maker.composition.container import detect_ollama_url, get_config_path, 
 
 
 class SettingsPanel(QWidget):
+    corpus_change_requested = Signal(str)
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._fields: dict[str, QLineEdit | QSpinBox] = {}
@@ -50,6 +53,14 @@ class SettingsPanel(QWidget):
         form.addRow(QLabel("<b>Paths</b>"))
         _add_str("Corpus dir", "paths.corpus_dir", "/caminho/para/corpus")
         _add_str("DB dir", "paths.db_dir", "~/.local/share/rag_maker/db")
+        db_widget = self._fields["paths.db_dir"]
+        if isinstance(db_widget, QLineEdit):
+            db_widget.setReadOnly(True)
+            db_widget.setToolTip(
+                "Derivado automaticamente de {corpus_dir}/rag. "
+                "Para trocar, altere a pasta do corpus."
+            )
+            db_widget.setStyleSheet("QLineEdit { background-color: palette(alternate-base); }")
 
         form.addRow(QLabel("<b>Ollama</b>"))
         # URL com botão de auto-detecção
@@ -129,10 +140,31 @@ class SettingsPanel(QWidget):
 
     def _save(self) -> None:
         try:
+            new_corpus = self._fields["paths.corpus_dir"].text().strip() \
+                if isinstance(self._fields.get("paths.corpus_dir"), QLineEdit) else ""
             for key, widget in self._fields.items():
-                value = str(widget.value()) if isinstance(widget, QSpinBox) else widget.text().strip()
+                if key in ("paths.corpus_dir", "paths.db_dir"):
+                    continue  # corpus_dir vai pelo orquestrador; db_dir e derivado
+                value = (
+                    str(widget.value()) if isinstance(widget, QSpinBox)
+                    else widget.text().strip()
+                )
                 if value:
                     set_config_value(key, value)
             QMessageBox.information(self, "Configurações", "Salvo com sucesso.")
+
+            current = str(self._config.paths.corpus_dir or "")
+            if new_corpus and new_corpus != current:
+                self.corpus_change_requested.emit(new_corpus)
         except Exception as exc:
             QMessageBox.critical(self, "Erro", str(exc))
+
+    def reload_after_rebind(self) -> None:
+        """Chamado pelo MainWindow após troca de corpus: recarrega config do
+        disco e repopula todos os campos (inclusive db_dir derivado).
+        """
+        try:
+            self._config = AppConfig.from_file()
+        except Exception:
+            self._config = AppConfig()
+        self._populate()
