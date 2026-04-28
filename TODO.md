@@ -33,8 +33,8 @@ Referências:
 | F7 | Polimento + Distribuição | neutro | 7 | Média |
 | F8 | Sincronização corpus↔rag GUI | Front/Mid | 7 | Média |
 | F9 | Exibição, atalho de abertura e auto-rescan do RAG | Front | 2 | Média |
-| F10 | Bugfixes pós-release | Back | 1 | Alta |
-| **Total** | | | **96** | |
+| F10 | Bugfixes pós-release | Back | 2 | Alta |
+| **Total** | | | **97** | |
 
 ---
 
@@ -138,3 +138,4 @@ Referências:
 | F9.1 | GUI | Exibir `db_dir` derivado (read-only) em `CorpusPanel` e adicionar botão "Abrir" em `CorpusPanel` e `SettingsPanel` que invoca o explorador de arquivos do SO via `QDesktopServices.openUrl(QUrl.fromLocalFile(...))` apontando para o diretório real do banco LanceDB. Garantir que a sincronização automática corpus→rag (já implementada em F8) continua propagando o novo caminho para os dois campos. | Média | F8.7 | Baixa | ⏳ Pendente | — |
 | F9.2 | GUI | Ao trocar de corpus (via `CorpusPanel` ou `SettingsPanel`), disparar automaticamente scan do novo corpus + leitura do novo `rag/` (LanceDB) e atualizar a tabela "Obras do corpus" com o resultado: arquivos novos/modificados/indexados/removidos. Limpar entradas antigas antes de popular as novas. | Média | F8.7 | Baixa | 🔍 Pendente verificação | — |
 | F10.1 | Back/Bugfix | `CrossEncoderReranker` repassa `device="auto"` direto para `CrossEncoder`/torch, que rejeita com `Expected one of cpu, cuda, ipu, xpu, ...`. Resolver `"auto"` → `cuda` se `torch.cuda.is_available()` senão `cpu`, antes de instanciar o modelo. Adicionar teste unitário cobrindo a resolução. | Alta | F7.7 | Baixa | ✅ Concluído | ✓ |
+| F10.2 | Back/Bugfix | `CrossEncoderReranker`: ao carregar modelo em CUDA com VRAM insuficiente (RTX 3050 4GB já parcialmente ocupada pelo Ollama), torch lança `OutOfMemoryError`/`RuntimeError`. Adicionar fallback automático: capturar OOM no `_get_model`, liberar cache CUDA, refazer load em CPU e logar a degradação. Teste unitário simulando OOM. | Alta | F10.1 | Média | ✅ Concluído | ✓ |
