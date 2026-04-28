@@ -2,9 +2,24 @@ from __future__ import annotations
 
 from typing import Any
 
+import torch
 from sentence_transformers import CrossEncoder
 
 from rag_maker.domain.models import RankedChunk, RetrievedChunk
+
+
+def _resolve_device(device: str) -> str:
+    """Resolve `"auto"` para `cuda`/`mps`/`cpu` conforme disponibilidade.
+
+    PyTorch não aceita `"auto"` como device string; precisa ser resolvido antes.
+    """
+    if device != "auto":
+        return device
+    if torch.cuda.is_available():
+        return "cuda"
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
 
 
 class CrossEncoderReranker:
@@ -19,7 +34,7 @@ class CrossEncoderReranker:
         device: str = "auto",
     ) -> None:
         self._model_name = model_name
-        self._device = device
+        self._device = _resolve_device(device)
         self._model: CrossEncoder | None = None
 
     def _get_model(self) -> CrossEncoder:

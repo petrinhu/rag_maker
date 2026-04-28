@@ -32,7 +32,9 @@ Referências:
 | F6 | Adapter driving: GUI Qt6 | Front | 10 | Média |
 | F7 | Polimento + Distribuição | neutro | 7 | Média |
 | F8 | Sincronização corpus↔rag GUI | Front/Mid | 7 | Média |
-| **Total** | | | **93** | |
+| F9 | Exibição, atalho de abertura e auto-rescan do RAG | Front | 2 | Média |
+| F10 | Bugfixes pós-release | Back | 1 | Alta |
+| **Total** | | | **96** | |
 
 ---
 
@@ -133,3 +135,6 @@ Referências:
 | F8.5 | Tests/Integration | `tests/integration/test_gui_corpus_switch.py` via pytest-qt: troca dispara update de TOML, criação de rag/, sync dos panels | Média | F8.4 | Média | ✅ Concluído | ✓ |
 | F8.6 | QA | Smoke test manual dos 3 fluxos (Corpus, Configurações, erro) + busy-block | Média | F8.5 | Baixa | ✅ Concluído | ✓ |
 | F8.7 | Docs | Atualizar `TODO.md` (esta fase) e garantir que `docs/superpowers/specs/` e `/plans/` estão commitados | Baixa | F8.6 | Baixa | ✅ Concluído | ✓ |
+| F9.1 | GUI | Exibir `db_dir` derivado (read-only) em `CorpusPanel` e adicionar botão "Abrir" em `CorpusPanel` e `SettingsPanel` que invoca o explorador de arquivos do SO via `QDesktopServices.openUrl(QUrl.fromLocalFile(...))` apontando para o diretório real do banco LanceDB. Garantir que a sincronização automática corpus→rag (já implementada em F8) continua propagando o novo caminho para os dois campos. | Média | F8.7 | Baixa | ⏳ Pendente | — |
+| F9.2 | GUI | Ao trocar de corpus (via `CorpusPanel` ou `SettingsPanel`), disparar automaticamente scan do novo corpus + leitura do novo `rag/` (LanceDB) e atualizar a tabela "Obras do corpus" com o resultado: arquivos novos/modificados/indexados/removidos. Limpar entradas antigas antes de popular as novas. | Média | F8.7 | Baixa | 🔍 Pendente verificação | — |
+| F10.1 | Back/Bugfix | `CrossEncoderReranker` repassa `device="auto"` direto para `CrossEncoder`/torch, que rejeita com `Expected one of cpu, cuda, ipu, xpu, ...`. Resolver `"auto"` → `cuda` se `torch.cuda.is_available()` senão `cpu`, antes de instanciar o modelo. Adicionar teste unitário cobrindo a resolução. | Alta | F7.7 | Baixa | ✅ Concluído | ✓ |
