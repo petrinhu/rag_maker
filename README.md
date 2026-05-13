@@ -185,6 +185,18 @@ Contém:
 
 Agentes devem ler `AGENTS.md` antes da primeira invocação e respeitar os contratos lá descritos.
 
+**Onde achar `AGENTS.md`:**
+
+- Clone do repo: `./AGENTS.md` na raiz.
+- Install via `uv tool install` ou `pipx install`: o arquivo não vai dentro da wheel. Aponte o agente para a URL canônica:
+  ```
+  https://codeberg.org/petrinhu/rag_maker/raw/branch/main/AGENTS.md
+  ```
+
+Instrução padrão para colar no prompt do agente:
+
+> "Antes de invocar a CLI `rag`, leia o contrato em https://codeberg.org/petrinhu/rag_maker/raw/branch/main/AGENTS.md e siga as regras documentadas (schema JSON, exit codes, workflow recomendado)."
+
 ---
 
 ## Configuração
@@ -400,6 +412,18 @@ It contains:
 - Error codes and how to react.
 
 Agents should read `AGENTS.md` before first use and respect the documented contracts.
+
+**Where to find `AGENTS.md`:**
+
+- Repo clone: `./AGENTS.md` at root.
+- Installed via `uv tool install` or `pipx install`: file is not bundled in the wheel. Point the agent at the canonical URL:
+  ```
+  https://codeberg.org/petrinhu/rag_maker/raw/branch/main/AGENTS.md
+  ```
+
+Standard instruction to paste into the agent prompt:
+
+> "Before invoking the `rag` CLI, read the contract at https://codeberg.org/petrinhu/rag_maker/raw/branch/main/AGENTS.md and follow the documented rules (JSON schema, exit codes, recommended workflow)."
 
 ---
 
