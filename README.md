@@ -1,5 +1,13 @@
 # rag-maker
 
+[![CI](https://ci.codeberg.org/api/badges/petrinhu/rag_maker/status.svg)](https://ci.codeberg.org/petrinhu/rag_maker)
+[![Release](https://img.shields.io/gitea/v/release/petrinhu/rag_maker?gitea_url=https%3A%2F%2Fcodeberg.org&display_name=tag&sort=semver&label=release)](https://codeberg.org/petrinhu/rag_maker/releases)
+[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
+[![uv](https://img.shields.io/badge/managed%20by-uv-purple)](https://github.com/astral-sh/uv)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-D7FF64.svg)](https://github.com/astral-sh/ruff)
+[![Typed: mypy strict](https://img.shields.io/badge/typed-mypy%20strict-blue.svg)](https://mypy-lang.org/)
+
 **[English version below](#english)**
 
 Ferramenta de **recuperação offline** (retrieval-only) para bibliotecas pessoais de documentos. Indexa PDF, DOCX, EPUB, TXT e Markdown em banco vetorial local; expõe trechos relevantes via **CLI** ou **GUI**, para que IAs externas (Claude Code, ChatGPT, Gemini) redijam resumos, artigos e livros com citações reais.
@@ -241,6 +249,11 @@ GPLv3, ver [LICENSE](LICENSE).
 <a id="english"></a>
 
 # rag-maker (English)
+
+[![CI](https://ci.codeberg.org/api/badges/petrinhu/rag_maker/status.svg)](https://ci.codeberg.org/petrinhu/rag_maker)
+[![Release](https://img.shields.io/gitea/v/release/petrinhu/rag_maker?gitea_url=https%3A%2F%2Fcodeberg.org&display_name=tag&sort=semver&label=release)](https://codeberg.org/petrinhu/rag_maker/releases)
+[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 
 Offline **retrieval-only** tool for personal document libraries. Indexes PDF, DOCX, EPUB, TXT, Markdown into a local vector store; serves relevant chunks via **CLI** or **GUI**, so external AIs (Claude Code, ChatGPT, Gemini) can write summaries, articles, and books with real citations.
 
