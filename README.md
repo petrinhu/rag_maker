@@ -1,76 +1,10 @@
 # rag-maker
 
-Ferramenta de **recuperação offline** (retrieval-only) para bibliotecas pessoais de documentos. Indexa PDF, DOCX, EPUB, TXT e Markdown num banco vetorial local e expõe os trechos mais relevantes via CLI ou GUI — para que IAs externas (Claude Code, ChatGPT, Gemini) redijam resumos, artigos e livros com citações reais.
+**[English version below](#english)**
 
-> **Não é um RAG completo.** Não gera respostas, não usa LLM local para síntese. O único modelo local é o `bge-m3:latest` (embeddings via Ollama). Quem redige é a IA externa.
+Ferramenta de **recuperação offline** (retrieval-only) para bibliotecas pessoais de documentos. Indexa PDF, DOCX, EPUB, TXT e Markdown em banco vetorial local; expõe trechos relevantes via **CLI** ou **GUI**, para que IAs externas (Claude Code, ChatGPT, Gemini) redijam resumos, artigos e livros com citações reais.
 
----
-
-## Quickstart
-
-### Pré-requisitos
-
-| Ferramenta | Versão mínima |
-|:---|:---|
-| Python | 3.11+ |
-| [uv](https://github.com/astral-sh/uv) | 0.4+ |
-| [Ollama](https://ollama.ai) | qualquer versão recente |
-
-```bash
-# 1. Instalar o Ollama e baixar o modelo de embedding
-ollama pull bge-m3:latest
-
-# 2. Instalar o rag-maker
-uv tool install git+https://codeberg.org/petrinhu/rag_maker.git
-
-# 3. Configurar a pasta do corpus
-rag config set paths.corpus_dir /caminho/para/seus/livros
-
-# 4. Ingerir documentos
-rag ingest
-
-# 5. Consultar
-rag query "filosofia da linguagem em Wittgenstein" --json --top-k 8
-```
-
----
-
-## Instalação para desenvolvimento
-
-```bash
-git clone https://codeberg.org/petrinhu/rag_maker.git
-cd rag_maker
-uv sync --extra dev --extra gui
-uv run pytest
-```
-
----
-
-## Comandos da CLI
-
-```
-rag status [--json]                    # estado: Ollama, banco, chunks
-rag ingest [--corpus DIR] [--full]     # ingerir corpus (incremental por padrão)
-rag query TEXTO [--top-k N] [--json]   # recuperar trechos ranqueados
-rag config get [KEY]                   # ler configuração
-rag config set KEY VALUE               # alterar configuração (escrita atômica)
-rag config path                        # mostrar caminho do config.toml
-rag ignore add|rm|list [PATH]          # gerenciar caminhos ignorados
-rag doctor                             # diagnóstico do ambiente
-rag --version
-```
-
-Exit codes: `0` OK · `1` erro de uso · `2` config inválida · `3` Ollama off · `4` modelo ausente · `5` banco corrompido · `6` corpus vazio · `70` erro interno.
-
----
-
-## GUI (PySide6)
-
-```bash
-rag-gui
-```
-
-Abre uma janela com três abas: **Corpus** (selecionar pasta, ingerir), **Consulta** (busca + tabela ranqueada, duplo-clique abre o arquivo) e **Configurações** (editar TOML via formulário). A statusbar mostra o estado do Ollama e o número de chunks indexados, atualizando a cada 10 s.
+> **Não é um RAG completo.** Não gera respostas, não usa LLM local para síntese. Único modelo local: `bge-m3:latest` (embeddings via Ollama). Quem redige é a IA externa.
 
 ---
 
@@ -78,60 +12,408 @@ Abre uma janela com três abas: **Corpus** (selecionar pasta, ingerir), **Consul
 
 | Camada | Tecnologia |
 |:---|:---|
-| Embeddings | Ollama HTTP API — `bge-m3:latest` (dim=1024) |
-| Banco vetorial | LanceDB ≥ 0.10 — HNSW cosine + FTS (tantivy/BM25) |
-| Fusão de rankings | RRF (Reciprocal Rank Fusion) |
-| Reranker | `BAAI/bge-reranker-v2-m3` via sentence-transformers |
-| Loaders | pypdf, python-docx, ebooklib + beautifulsoup4, stdlib |
-| Chunker | RecursiveCharacterTextSplitter (langchain-text-splitters) |
-| CLI | Typer + Rich |
-| GUI | PySide6 ≥ 6.7 |
-| Config | TOML (tomllib + tomli-w) + pydantic-settings |
-| Arquitetura | Hexagonal (Ports & Adapters) — `domain/`, `application/`, `adapters/`, `composition/` |
+| Linguagem | Python 3.11+ |
+| Empacotamento | [`uv`](https://github.com/astral-sh/uv) + `pyproject.toml` (PEP 621) |
+| Embeddings | [Ollama](https://ollama.ai) + `bge-m3:latest` (dim=1024) |
+| Vetor + lexical | [LanceDB](https://lancedb.com/) (HNSW cosine + FTS via tantivy, fusão RRF) |
+| Reranking | [`sentence-transformers`](https://www.sbert.net/) + `BAAI/bge-reranker-v2-m3` |
+| Loaders | `pypdf`, `python-docx`, `ebooklib`+`beautifulsoup4` |
+| CLI | [Typer](https://typer.tiangolo.com/) + [Rich](https://rich.readthedocs.io/) |
+| GUI | [PySide6](https://doc.qt.io/qtforpython-6/) (Qt 6) |
+| Config | [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) + TOML em `~/.config/rag_maker/config.toml` |
+| Testes | `pytest`, `pytest-qt`, `pytest-cov`, `hypothesis`, `respx` |
+| Qualidade | `ruff`, `mypy --strict`, `bandit`, `pip-audit`, `import-linter` |
 
 ---
 
-## Para IAs externas
+## Arquitetura
 
-Leia o **[AGENTS.md](AGENTS.md)** — contrato formal que descreve como chamar a CLI, o schema JSON de saída, como citar os trechos e quando não usar a ferramenta.
+Hexagonal (Ports & Adapters), 4 camadas com dependência unidirecional:
+
+```
+src/rag_maker/
+├── domain/            # nucleo puro; zero I/O, zero libs externas
+│   ├── models.py      # frozen dataclasses + excecoes
+│   ├── chunker.py     # RecursiveCharacterChunker
+│   ├── scoring.py     # rrf_fuse
+│   └── ports/         # Protocols: EmbedderPort, VectorStorePort, RerankerPort, LoaderPort
+├── application/       # use cases, so dependem de ports
+│   ├── config.py
+│   ├── ingest_use_case.py
+│   └── query_use_case.py
+├── adapters/
+│   ├── driving/       # primarios: CLI, GUI
+│   │   ├── cli/       # Typer + Rich
+│   │   └── gui/       # PySide6
+│   └── driven/        # secundarios: I/O via ports
+│       ├── ollama/    # EmbedderPort
+│       ├── lancedb/   # VectorStorePort
+│       ├── cross_encoder/  # RerankerPort
+│       ├── loaders/   # LoaderPort (pdf/docx/epub/text)
+│       └── config/    # TOML loader
+└── composition/       # wiring/DI
+    └── container.py
+```
+
+**Regras invioláveis** (validadas por `import-linter`):
+
+1. `domain/` nunca importa de `adapters/`, `application/`, libs externas, ou stdlib de I/O.
+2. `application/` só conhece `domain/` (inclui `domain/ports/`).
+3. `adapters/driven/` implementam Protocols de `domain/ports/`.
+4. `adapters/driving/` só conversam com `application/` via `composition/container`.
+5. Libs externas (lancedb, ollama, pypdf, PySide6, etc.) só aparecem em `adapters/`.
+
+---
+
+## Pré-requisitos
+
+```bash
+# 1. Ollama instalado + modelo de embedding baixado
+ollama pull bge-m3:latest
+
+# 2. uv (gerenciador de pacotes Python)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+---
+
+## Instalação
+
+### Como usuário (binários `rag` e `rag-gui` no PATH)
+
+```bash
+uv tool install git+https://codeberg.org/petrinhu/rag_maker.git
+```
+
+Ou via wheel publicado em releases:
+
+```bash
+pipx install https://codeberg.org/petrinhu/rag_maker/releases/download/vX.Y.Z/rag_maker-X.Y.Z-py3-none-any.whl
+```
+
+### Para desenvolvimento
+
+```bash
+git clone https://codeberg.org/petrinhu/rag_maker.git
+cd rag_maker
+uv sync --all-extras
+uv run pytest
+```
+
+---
+
+## Uso: CLI (`rag`)
+
+```bash
+# Apontar pasta com seus documentos
+rag config set paths.corpus_dir ~/biblioteca
+
+# Indexar (incremental: so novos/modificados)
+rag ingest
+
+# Reconstruir do zero
+rag ingest --full --yes
+
+# Buscar
+rag query "filosofia da linguagem em Wittgenstein"
+rag query "..." --json --top-k 8     # saida JSON para consumo de IA
+
+# Estado
+rag status              # paths, contagem de chunks, Ollama
+rag doctor              # diagnostico completo
+rag config path         # caminho do TOML
+
+# Ignorar caminhos
+rag ignore add ~/biblioteca/rascunhos
+rag ignore list
+rag ignore rm ~/biblioteca/rascunhos
+```
+
+### Exit codes
+
+| Código | Significado |
+|:---:|:---|
+| 0 | Sucesso |
+| 1 | Erro de usuário (args inválidos) |
+| 2 | Erro de configuração |
+| 3 | Ollama indisponível |
+| 4 | Modelo de embedding não encontrado |
+| 5 | Erro no banco vetorial |
+| 6 | Corpus vazio, sem dados indexados |
+| 70 | Erro interno |
+
+---
+
+## Uso: GUI (`rag-gui`)
+
+```bash
+rag-gui
+```
+
+Três abas:
+
+- **Corpus**: seletor de pasta (drag&drop), tabela "Obra / Status / Chunks / Caminho" com filtros por status (Novo, Modificado, Indexado, Removido) e busca por nome. Botões "Ingerir mudanças" / "Reconstruir tudo" com progresso em tempo real, pausar/parar e notificações de sistema para operações longas (>10s). Duplo-clique abre o arquivo no viewer do SO.
+- **Consulta**: campo de busca, slider `top_k`, tabela "Score / Arquivo / Página / Seção / Trecho". Duplo-clique abre o documento.
+- **Configurações**: formulário para editar paths, Ollama, chunking, retrieval, reranker. `DB dir` é read-only (derivado do corpus). Botão "Detectar" auto-localiza o Ollama. Trocar a pasta do corpus aqui propaga para a aba Corpus e recria/lê o `rag/` da nova pasta automaticamente.
+
+StatusBar: estado do Ollama (verde/amarelo/vermelho), modelo carregado, contador de chunks.
+
+Workers em `QThread`: UI nunca bloqueia durante ingestão ou query.
+
+---
+
+## `AGENTS.md`: Contrato para IAs externas
+
+O arquivo `AGENTS.md` na raiz é um **contrato formal** que orienta agentes LLM (Claude Code, ChatGPT, Gemini, etc.) sobre como invocar a CLI `rag` e interpretar resultados.
+
+Contém:
+
+- O que a ferramenta faz e quando usar.
+- Comandos exatos com flags recomendadas.
+- Schema JSON da saída de `rag query --json` (chunk_id, text, source_path, page, section, rerank_score, rrf_score).
+- Workflow recomendado: `rag status`, depois `rag query`, depois citar.
+- Lista explícita do que **não fazer** (inferir conteúdo não retornado, inventar referências, ignorar exit codes).
+- Códigos de erro e como reagir a cada um.
+
+Agentes devem ler `AGENTS.md` antes da primeira invocação e respeitar os contratos lá descritos.
 
 ---
 
 ## Configuração
 
-O arquivo de configuração fica em `~/.config/rag_maker/config.toml` (XDG). Um exemplo comentado está em [`rag_maker.toml.example`](rag_maker.toml.example).
+Arquivo TOML em `~/.config/rag_maker/config.toml` (XDG). Override por env var: `RAG_MAKER_*` com `__` como separador aninhado.
 
 ```toml
 [paths]
-corpus_dir = "/home/user/biblioteca"
+corpus_dir = "/home/usuario/biblioteca"
+# db_dir e derivado de corpus_dir/rag, nao edite
 
 [ollama]
+url = "http://127.0.0.1:11434"
 embedding_model = "bge-m3:latest"
-auto_pull       = false
+timeout_seconds = 180
 
 [chunking]
-size    = 1000
+size = 1000
 overlap = 200
 
 [retrieval]
 coarse_top_n = 100
 rerank_top_k = 8
+alpha = 0.5
+
+[reranker]
+model = "BAAI/bge-reranker-v2-m3"
+device = "auto"          # "auto" | "cpu" | "cuda" | "mps"
+
+[gui]
+recursive_scan = true
+```
+
+Override por env:
+
+```bash
+RAG_MAKER_OLLAMA__EMBEDDING_MODEL=other-model:latest rag query "..."
 ```
 
 ---
 
-## Troubleshooting
+## Testes
 
-| Sintoma | Solução |
-|:---|:---|
-| `Ollama indisponível` (exit 3) | Execute `ollama serve` ou inicie o serviço systemd do Ollama |
-| `Modelo não encontrado` (exit 4) | `ollama pull bge-m3:latest` |
-| `Corpus vazio` (exit 6) | Execute `rag ingest` ou `rag config set paths.corpus_dir /caminho` |
-| GUI não abre (Wayland) | `QT_QPA_PLATFORM=xcb rag-gui` |
-| Reranker lento na 1ª query | Normal — o modelo (~500 MB) carrega na primeira chamada |
+```bash
+uv run pytest                              # tudo
+uv run pytest -m unit                      # so unit
+uv run pytest -m integration               # integracao (sem rede via respx)
+uv run pytest -m e2e                       # CLI end-to-end via subprocess
+uv run pytest --cov=src/rag_maker          # cobertura
+```
+
+Quality gates rodam em CI: `ruff check`, `mypy --strict`, `bandit -r src/`, `lint-imports`, `pip-audit`.
 
 ---
 
 ## Licença
 
-[PolyForm Noncommercial License 1.0.0](LICENSE) — uso não-comercial livre; uso comercial proibido.
+GPLv3, ver [LICENSE](LICENSE).
+
+---
+
+<a id="english"></a>
+
+# rag-maker (English)
+
+Offline **retrieval-only** tool for personal document libraries. Indexes PDF, DOCX, EPUB, TXT, Markdown into a local vector store; serves relevant chunks via **CLI** or **GUI**, so external AIs (Claude Code, ChatGPT, Gemini) can write summaries, articles, and books with real citations.
+
+> **Not a full RAG.** No answer generation, no local synthesis LLM. Only local model: `bge-m3:latest` (embeddings via Ollama). External AI does the writing.
+
+---
+
+## Stack
+
+| Layer | Technology |
+|:---|:---|
+| Language | Python 3.11+ |
+| Packaging | [`uv`](https://github.com/astral-sh/uv) + `pyproject.toml` (PEP 621) |
+| Embeddings | [Ollama](https://ollama.ai) + `bge-m3:latest` (dim=1024) |
+| Vector + lexical | [LanceDB](https://lancedb.com/) (HNSW cosine + FTS via tantivy, RRF fusion) |
+| Reranking | [`sentence-transformers`](https://www.sbert.net/) + `BAAI/bge-reranker-v2-m3` |
+| Loaders | `pypdf`, `python-docx`, `ebooklib`+`beautifulsoup4` |
+| CLI | [Typer](https://typer.tiangolo.com/) + [Rich](https://rich.readthedocs.io/) |
+| GUI | [PySide6](https://doc.qt.io/qtforpython-6/) (Qt 6) |
+| Config | [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) + TOML at `~/.config/rag_maker/config.toml` |
+| Tests | `pytest`, `pytest-qt`, `pytest-cov`, `hypothesis`, `respx` |
+| Quality | `ruff`, `mypy --strict`, `bandit`, `pip-audit`, `import-linter` |
+
+---
+
+## Architecture
+
+Hexagonal (Ports & Adapters), 4 layers, unidirectional dependency:
+
+```
+src/rag_maker/
+├── domain/            # pure core; zero I/O, zero external libs
+├── application/       # use cases, depend only on ports
+├── adapters/
+│   ├── driving/       # primary: CLI (Typer+Rich), GUI (PySide6)
+│   └── driven/        # secondary: ollama, lancedb, cross_encoder, loaders, config
+└── composition/       # wiring/DI
+```
+
+**Inviolable rules** (enforced by `import-linter`):
+
+1. `domain/` never imports from `adapters/`, `application/`, external libs, or I/O stdlib.
+2. `application/` only knows `domain/`.
+3. `adapters/driven/` implement `domain/ports/` Protocols.
+4. `adapters/driving/` only talk to `application/` via `composition/container`.
+5. External libs (lancedb, ollama, pypdf, PySide6, etc.) only in `adapters/`.
+
+---
+
+## Prerequisites
+
+```bash
+ollama pull bge-m3:latest
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+---
+
+## Install
+
+### As user
+
+```bash
+uv tool install git+https://codeberg.org/petrinhu/rag_maker.git
+```
+
+Or via wheel from releases:
+
+```bash
+pipx install https://codeberg.org/petrinhu/rag_maker/releases/download/vX.Y.Z/rag_maker-X.Y.Z-py3-none-any.whl
+```
+
+### For development
+
+```bash
+git clone https://codeberg.org/petrinhu/rag_maker.git
+cd rag_maker
+uv sync --all-extras
+uv run pytest
+```
+
+---
+
+## CLI usage (`rag`)
+
+```bash
+rag config set paths.corpus_dir ~/library
+rag ingest                              # incremental
+rag ingest --full --yes                 # rebuild from scratch
+rag query "philosophy of language in Wittgenstein"
+rag query "..." --json --top-k 8        # JSON for AI consumption
+rag status
+rag doctor
+rag config path
+rag ignore add ~/library/drafts
+rag ignore list
+rag ignore rm ~/library/drafts
+```
+
+### Exit codes
+
+| Code | Meaning |
+|:---:|:---|
+| 0 | Success |
+| 1 | User error (invalid args) |
+| 2 | Configuration error |
+| 3 | Ollama unreachable |
+| 4 | Embedding model not found |
+| 5 | Vector store error |
+| 6 | Empty corpus, no indexed data |
+| 70 | Internal error |
+
+---
+
+## GUI usage (`rag-gui`)
+
+```bash
+rag-gui
+```
+
+Three tabs:
+
+- **Corpus**: folder picker (drag&drop), table "Document / Status / Chunks / Path" with filters by status (New, Modified, Indexed, Removed) and filename search. "Ingest changes" / "Rebuild all" buttons with real-time progress, pause/stop, system notifications for long ops (>10s). Double-click opens file in OS viewer.
+- **Query**: search field, `top_k` slider, table "Score / File / Page / Section / Excerpt". Double-click opens document.
+- **Settings**: form for paths, Ollama, chunking, retrieval, reranker. `DB dir` is read-only (derived from corpus). "Detect" auto-locates Ollama. Changing corpus folder here propagates to Corpus tab and auto-creates/reads new `rag/` folder.
+
+StatusBar: Ollama state (green/yellow/red), loaded model, chunk count.
+
+Workers in `QThread`: UI never blocks.
+
+---
+
+## `AGENTS.md`: Contract for external AIs
+
+The `AGENTS.md` file at repo root is a **formal contract** that instructs LLM agents (Claude Code, ChatGPT, Gemini, etc.) on how to invoke the `rag` CLI and interpret results.
+
+It contains:
+
+- What the tool does, when to use it.
+- Exact commands with recommended flags.
+- JSON schema of `rag query --json` output (chunk_id, text, source_path, page, section, rerank_score, rrf_score).
+- Recommended workflow: `rag status`, then `rag query`, then cite.
+- Explicit list of what **not to do** (infer content not returned, fabricate references, ignore exit codes).
+- Error codes and how to react.
+
+Agents should read `AGENTS.md` before first use and respect the documented contracts.
+
+---
+
+## Configuration
+
+TOML at `~/.config/rag_maker/config.toml` (XDG). Override via env: `RAG_MAKER_*` with `__` as nested separator. See pt-br section above for full TOML example.
+
+```bash
+RAG_MAKER_OLLAMA__EMBEDDING_MODEL=other-model:latest rag query "..."
+```
+
+---
+
+## Tests
+
+```bash
+uv run pytest                              # all
+uv run pytest -m unit                      # unit only
+uv run pytest -m integration               # integration (no network via respx)
+uv run pytest -m e2e                       # CLI end-to-end via subprocess
+uv run pytest --cov=src/rag_maker          # coverage
+```
+
+Quality gates in CI: `ruff check`, `mypy --strict`, `bandit -r src/`, `lint-imports`, `pip-audit`.
+
+---
+
+## License
+
+GPLv3, see [LICENSE](LICENSE).

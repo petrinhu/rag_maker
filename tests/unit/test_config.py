@@ -69,3 +69,50 @@ class TestAppConfigEnvOverride:
         monkeypatch.setenv("RAG_MAKER_OLLAMA__EMBEDDING_MODEL", "my-model:v1")
         cfg = AppConfig()
         assert cfg.ollama.embedding_model == "my-model:v1"
+
+    def test_env_overrides_toml_when_both_present(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        toml_path = tmp_path / "config.toml"
+        toml_path.write_bytes(
+            tomli_w.dumps({"paths": {"db_dir": "/from/toml"}}).encode()
+        )
+        monkeypatch.setenv("RAG_MAKER_PATHS__DB_DIR", "/from/env")
+        cfg = AppConfig.from_file(toml_path)
+        assert str(cfg.paths.db_dir) == "/from/env"
+
+
+@pytest.mark.unit
+class TestDeepMerge:
+    def test_override_replaces_scalar(self) -> None:
+        from rag_maker.application.config import _deep_merge
+
+        out = _deep_merge({"a": 1}, {"a": 2})
+        assert out == {"a": 2}
+
+    def test_override_adds_new_key(self) -> None:
+        from rag_maker.application.config import _deep_merge
+
+        out = _deep_merge({"a": 1}, {"b": 2})
+        assert out == {"a": 1, "b": 2}
+
+    def test_nested_merge_keeps_base_keys(self) -> None:
+        from rag_maker.application.config import _deep_merge
+
+        out = _deep_merge({"x": {"a": 1, "b": 2}}, {"x": {"b": 99}})
+        assert out == {"x": {"a": 1, "b": 99}}
+
+    def test_override_dict_replaces_scalar_in_base(self) -> None:
+        from rag_maker.application.config import _deep_merge
+
+        out = _deep_merge({"x": 1}, {"x": {"y": 2}})
+        assert out == {"x": {"y": 2}}
+
+    def test_does_not_mutate_inputs(self) -> None:
+        from rag_maker.application.config import _deep_merge
+
+        base = {"x": {"a": 1}}
+        override = {"x": {"b": 2}}
+        _deep_merge(base, override)
+        assert base == {"x": {"a": 1}}
+        assert override == {"x": {"b": 2}}

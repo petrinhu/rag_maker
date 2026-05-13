@@ -1,0 +1,62 @@
+when:
+  - event: [push, pull_request, tag]
+
+steps:
+  install:
+    image: python:3.11-slim
+    commands:
+      - apt-get update -qq && apt-get install -y -qq curl git
+      - curl -LsSf https://astral.sh/uv/install.sh | sh
+      - export PATH="$HOME/.local/bin:$PATH" && uv --version
+      - export PATH="$HOME/.local/bin:$PATH" && uv sync --extra dev
+
+  lint:
+    image: python:3.11-slim
+    commands:
+      - export PATH="$HOME/.local/bin:$PATH"
+      - uv run ruff check src/ tests/
+      - uv run ruff format --check src/ tests/
+
+  typecheck:
+    image: python:3.11-slim
+    commands:
+      - export PATH="$HOME/.local/bin:$PATH"
+      - uv run mypy src/
+
+  imports:
+    image: python:3.11-slim
+    commands:
+      - export PATH="$HOME/.local/bin:$PATH"
+      - uv run lint-imports
+
+  security:
+    image: python:3.11-slim
+    commands:
+      - export PATH="$HOME/.local/bin:$PATH"
+      - uv run bandit -r src/ -c bandit.yaml
+
+  test-unit:
+    image: python:3.11-slim
+    commands:
+      - export PATH="$HOME/.local/bin:$PATH"
+      - uv run pytest -m unit -q --cov=src/rag_maker --cov-fail-under=70
+
+  build:
+    image: python:3.11-slim
+    commands:
+      - export PATH="$HOME/.local/bin:$PATH"
+      - uv build
+      - ls -lh dist/
+
+  release:
+    image: woodpeckerci/plugin-release:latest
+    when:
+      event: tag
+    settings:
+      api_key:
+        from_secret: codeberg_token
+      base_url: https://codeberg.org
+      files:
+        - dist/*.whl
+        - dist/*.tar.gz
+      title: ${CI_COMMIT_TAG}

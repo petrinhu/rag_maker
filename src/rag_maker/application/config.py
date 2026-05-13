@@ -85,5 +85,21 @@ class AppConfig(BaseSettings):
         if config_path.exists():
             with open(config_path, "rb") as f:
                 data = tomllib.load(f)
-            return cls.model_validate(data)
+            # Mescla TOML (base) com env vars (override). Sem isso, `model_validate`
+            # ignora env e RAG_MAKER_* não funciona quando TOML existe.
+            env_overrides = cls().model_dump(exclude_unset=True)
+            merged = _deep_merge(data, env_overrides)
+            return cls.model_validate(merged)
         return cls()
+
+
+def _deep_merge(base: dict[str, object], override: dict[str, object]) -> dict[str, object]:
+    """Merge recursivo: override prevalece sobre base em chaves coincidentes."""
+    out = dict(base)
+    for key, value in override.items():
+        base_value = out.get(key)
+        if isinstance(base_value, dict) and isinstance(value, dict):
+            out[key] = _deep_merge(base_value, value)
+        else:
+            out[key] = value
+    return out
