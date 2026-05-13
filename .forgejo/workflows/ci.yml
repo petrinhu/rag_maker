@@ -104,18 +104,51 @@ jobs:
           TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
         run: |
-          set -e
+          set -eo pipefail
           API="https://codeberg.org/api/v1/repos/$REPO"
-          REL=$(curl -sf -X POST -H "Authorization: token $TOKEN" \
+
+          # Sanity: token presente?
+          if [ -z "${TOKEN:-}" ]; then
+            echo "FATAL: secret CLAUDIO_RAG vazio. Configure em Codeberg > Settings > Actions > Secrets."
+            exit 1
+          fi
+          echo "Token length: ${#TOKEN}"
+
+          # Tentar criar release. Captura body + status.
+          echo "POST $API/releases"
+          REL_BODY=$(mktemp); REL_CODE=$(curl -s -o "$REL_BODY" -w "%{http_code}" -X POST \
+            -H "Authorization: token $TOKEN" \
             -H "Content-Type: application/json" \
             "$API/releases" \
-            -d "{\"tag_name\":\"$TAG\",\"name\":\"$TAG\",\"draft\":false,\"prerelease\":false}" || true)
-          REL_ID=$(echo "$REL" | jq -r '.id // empty')
-          if [ -z "$REL_ID" ]; then
-            REL_ID=$(curl -sf -H "Authorization: token $TOKEN" "$API/releases/tags/$TAG" | jq -r '.id')
+            -d "{\"tag_name\":\"$TAG\",\"name\":\"$TAG\",\"draft\":false,\"prerelease\":false}")
+          echo "POST status: $REL_CODE"
+          cat "$REL_BODY"; echo
+
+          if [ "$REL_CODE" = "201" ]; then
+            REL_ID=$(jq -r '.id' < "$REL_BODY")
+          else
+            # Pode ja existir, buscar pelo tag.
+            echo "GET $API/releases/tags/$TAG"
+            GET_BODY=$(mktemp); GET_CODE=$(curl -s -o "$GET_BODY" -w "%{http_code}" \
+              -H "Authorization: token $TOKEN" "$API/releases/tags/$TAG")
+            echo "GET status: $GET_CODE"
+            cat "$GET_BODY"; echo
+            if [ "$GET_CODE" != "200" ]; then
+              echo "FATAL: nao consegui criar nem encontrar release."
+              exit 1
+            fi
+            REL_ID=$(jq -r '.id' < "$GET_BODY")
           fi
+          echo "Release ID: $REL_ID"
+
           for f in dist/rag_maker-*.whl dist/rag_maker-*.tar.gz; do
-            curl -sf -X POST -H "Authorization: token $TOKEN" \
+            echo "Upload $f"
+            ASSET_CODE=$(curl -s -o /tmp/asset_resp -w "%{http_code}" -X POST \
+              -H "Authorization: token $TOKEN" \
               -F "attachment=@$f" \
-              "$API/releases/$REL_ID/assets?name=$(basename $f)"
+              "$API/releases/$REL_ID/assets?name=$(basename $f)")
+            echo "Asset $f status: $ASSET_CODE"
+            cat /tmp/asset_resp; echo
+            [ "$ASSET_CODE" = "201" ] || { echo "FATAL upload"; exit 1; }
           done
+          echo "Release $TAG publicada com sucesso."
