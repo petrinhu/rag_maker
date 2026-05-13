@@ -141,14 +141,28 @@ jobs:
           fi
           echo "Release ID: $REL_ID"
 
+          # Lista assets ja anexados para idempotencia.
+          EXISTING=$(curl -s -H "Authorization: token $TOKEN" \
+            "$API/releases/$REL_ID/assets" | jq -r '.[].name' 2>/dev/null || echo "")
+          echo "Assets ja anexados: $EXISTING"
+
           for f in dist/rag_maker-*.whl dist/rag_maker-*.tar.gz; do
+            BN=$(basename "$f")
+            if echo "$EXISTING" | grep -qx "$BN"; then
+              echo "Skip $BN (ja anexado)"
+              continue
+            fi
             echo "Upload $f"
             ASSET_CODE=$(curl -s -o /tmp/asset_resp -w "%{http_code}" -X POST \
               -H "Authorization: token $TOKEN" \
               -F "attachment=@$f" \
-              "$API/releases/$REL_ID/assets?name=$(basename $f)")
+              "$API/releases/$REL_ID/assets?name=$BN")
             echo "Asset $f status: $ASSET_CODE"
             cat /tmp/asset_resp; echo
-            [ "$ASSET_CODE" = "201" ] || { echo "FATAL upload"; exit 1; }
+            # 201 created, 409 conflito ja-existe (idempotente)
+            case "$ASSET_CODE" in
+              201|409) : ;;
+              *) echo "FATAL upload"; exit 1 ;;
+            esac
           done
           echo "Release $TAG publicada com sucesso."
