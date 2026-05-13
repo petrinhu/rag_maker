@@ -238,10 +238,10 @@ class CorpusPanel(QWidget):
         self._file_table.customContextMenuRequested.connect(self._show_context_menu)
         files_layout.addWidget(self._file_table)
 
-        remove_btn = QPushButton("Remover selecionado do indice")
-        remove_btn.setToolTip("Remove do banco vetorial (nao apaga o arquivo original)")
-        remove_btn.clicked.connect(self._remove_selected)
-        files_layout.addWidget(remove_btn)
+        self._remove_btn = QPushButton("Remover selecionado do indice")
+        self._remove_btn.setToolTip("Remove do banco vetorial (nao apaga o arquivo original)")
+        self._remove_btn.clicked.connect(self._remove_selected)
+        files_layout.addWidget(self._remove_btn)
 
         root.addWidget(files_group, stretch=1)
 
@@ -352,6 +352,9 @@ class CorpusPanel(QWidget):
         corpus = self._corpus_dir()
         if corpus is None or not corpus.is_dir():
             return
+        # Aguarda scan anterior terminar; senao QThread destruido enquanto roda -> SIGABRT.
+        if self._scan_worker is not None and self._scan_worker.isRunning():
+            self._scan_worker.wait(5000)
         self._scan_btn.setEnabled(False)
         self._summary_label.setText("Analisando...")
         self._scan_worker = ScanWorker(
@@ -455,6 +458,13 @@ class CorpusPanel(QWidget):
     # ── Remocao ───────────────────────────────────────────────────────────────
 
     def _remove_selected(self) -> None:
+        if self.is_busy():
+            QMessageBox.warning(
+                self,
+                "Aguarde",
+                "Há ingestão ou scan em andamento. Aguarde terminar antes de remover.",
+            )
+            return
         selected = self._file_table.selectionModel().selectedRows()
         if not selected:
             QMessageBox.information(
@@ -666,6 +676,7 @@ class CorpusPanel(QWidget):
         self._ingest_btn.setEnabled(not busy)
         self._recreate_btn.setEnabled(not busy)
         self._scan_btn.setEnabled(not busy)
+        self._remove_btn.setEnabled(not busy)
         self._progress_bar.setVisible(busy)
         self._progress_label.setVisible(busy)
         self._file_progress_bar.setVisible(busy)

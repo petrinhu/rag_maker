@@ -33,8 +33,8 @@ Referências:
 | F7 | Polimento + Distribuição | neutro | 7 | Média |
 | F8 | Sincronização corpus↔rag GUI | Front/Mid | 7 | Média |
 | F9 | Exibição, atalho de abertura e auto-rescan do RAG | Front | 2 | Média |
-| F10 | Bugfixes pós-release | Back | 3 | Alta |
-| **Total** | | | **98** | |
+| F10 | Bugfixes pós-release | Back/Front | 4 | Alta |
+| **Total** | | | **99** | |
 
 ---
 
@@ -140,3 +140,4 @@ Referências:
 | F10.1 | Back/Bugfix | `CrossEncoderReranker` repassa `device="auto"` direto para `CrossEncoder`/torch, que rejeita com `Expected one of cpu, cuda, ipu, xpu, ...`. Resolver `"auto"` → `cuda` se `torch.cuda.is_available()` senão `cpu`, antes de instanciar o modelo. Adicionar teste unitário cobrindo a resolução. | Alta | F7.7 | Baixa | ✅ Concluído | ✓ |
 | F10.2 | Back/Bugfix | `CrossEncoderReranker`: ao carregar modelo em CUDA com VRAM insuficiente (RTX 3050 4GB já parcialmente ocupada pelo Ollama), torch lança `OutOfMemoryError`/`RuntimeError`. Adicionar fallback automático: capturar OOM no `_get_model`, liberar cache CUDA, refazer load em CPU e logar a degradação. Teste unitário simulando OOM. | Alta | F10.1 | Média | ✅ Concluído | ✓ |
 | F10.3 | Back/Bugfix | Modelo carrega em CUDA mas `predict()` estoura VRAM durante a inferência (top_n=100 pares, 150 MiB de ativações). Adicionar (a) pré-flight `torch.cuda.mem_get_info()` em `_resolve_device` que recusa `cuda` se livre < ~3500 MiB e (b) fallback em `rerank()` que recarrega em CPU e refaz a chamada uma vez ao detectar OOM no `predict`. Testes unitários cobrindo ambos os cenários. | Alta | F10.2 | Média | ✅ Concluído | ✓ |
+| F10.4 | Front/Bugfix | `CorpusPanel`: clicar "Remover do indice" enquanto `IngestWorker` roda causa SIGABRT (`QThread: Destroyed while thread '' is still running` + `_Py_Dealloc` cross-thread). Causa: (a) `remove_btn` era variável local, não desabilitado em `_set_busy`; (b) `_remove_selected` chama `container.ingest.remove_file()` síncrono no main thread concorrendo com `IngestWorker` no mesmo LanceDB store; (c) `_trigger_scan` sobrescreve `self._scan_worker` sem `wait()`. Fix: salvar `self._remove_btn`, incluir em `_set_busy`, guard `is_busy()` em `_remove_selected`, `wait(5000)` em `_trigger_scan` antes de recriar worker. | Alta | F10.3 | Média | ✅ Concluído | ✓ |
