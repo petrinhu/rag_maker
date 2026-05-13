@@ -1,6 +1,6 @@
 # rag-maker
 
-[![CI](https://ci.codeberg.org/api/badges/petrinhu/rag_maker/status.svg)](https://ci.codeberg.org/petrinhu/rag_maker)
+[![CI](https://codeberg.org/petrinhu/rag_maker/actions/workflows/ci.yml/badge.svg)](https://codeberg.org/petrinhu/rag_maker/actions)
 [![Release](https://img.shields.io/gitea/v/release/petrinhu/rag_maker?gitea_url=https%3A%2F%2Fcodeberg.org&display_name=tag&sort=semver&label=release)](https://codeberg.org/petrinhu/rag_maker/releases)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
@@ -250,7 +250,7 @@ GPLv3, ver [LICENSE](LICENSE).
 
 # rag-maker (English)
 
-[![CI](https://ci.codeberg.org/api/badges/petrinhu/rag_maker/status.svg)](https://ci.codeberg.org/petrinhu/rag_maker)
+[![CI](https://codeberg.org/petrinhu/rag_maker/actions/workflows/ci.yml/badge.svg)](https://codeberg.org/petrinhu/rag_maker/actions)
 [![Release](https://img.shields.io/gitea/v/release/petrinhu/rag_maker?gitea_url=https%3A%2F%2Fcodeberg.org&display_name=tag&sort=semver&label=release)](https://codeberg.org/petrinhu/rag_maker/releases)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
