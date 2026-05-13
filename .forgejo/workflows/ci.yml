@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: docker
+    container:
+      image: python:3.11-slim
+    steps:
+      - name: Install deps
+        run: |
+          apt-get update -qq && apt-get install -y -qq curl git
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync env
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv sync --extra dev
+
+      - name: Ruff check
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run ruff check src/ tests/
+
+      - name: Ruff format check
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run ruff format --check src/ tests/
+
+      - name: Mypy strict
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run mypy src/
+
+      - name: Import linter
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run lint-imports
+
+      - name: Bandit
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run bandit -r src/ -c bandit.yaml
+
+      - name: Unit tests + coverage
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run pytest -m unit -q --cov=src/rag_maker --cov-fail-under=70
+
+  build:
+    runs-on: docker
+    container:
+      image: python:3.11-slim
+    needs: quality
+    steps:
+      - name: Install uv
+        run: |
+          apt-get update -qq && apt-get install -y -qq curl git
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build wheel + sdist
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv build
+          ls -lh dist/
+
+      - name: Upload artifacts
+        uses: forgejo/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
+
+  release:
+    runs-on: docker
+    container:
+      image: python:3.11-slim
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Install uv + tools
+        run: |
+          apt-get update -qq && apt-get install -y -qq curl git jq
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv build
+
+      - name: Create Codeberg release
+        env:
+          TOKEN: ${{ secrets.CLAUDIO_RAG }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          API="https://codeberg.org/api/v1/repos/${{ github.repository }}"
+          REL=$(curl -sf -X POST -H "Authorization: token $TOKEN" \
+            -H "Content-Type: application/json" \
+            "$API/releases" \
+            -d "{\"tag_name\":\"$TAG\",\"name\":\"$TAG\",\"draft\":false,\"prerelease\":false}")
+          REL_ID=$(echo "$REL" | jq -r '.id // empty')
+          if [ -z "$REL_ID" ]; then
+            REL_ID=$(curl -sf -H "Authorization: token $TOKEN" "$API/releases/tags/$TAG" | jq -r '.id')
+          fi
+          for f in dist/rag_maker-*.whl dist/rag_maker-*.tar.gz; do
+            curl -sf -X POST -H "Authorization: token $TOKEN" \
+              -F "attachment=@$f" \
+              "$API/releases/$REL_ID/assets?name=$(basename $f)"
+          done
