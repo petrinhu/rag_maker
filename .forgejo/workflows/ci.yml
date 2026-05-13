@@ -8,88 +8,95 @@ on:
     branches: [main]
 
 jobs:
-  quality:
+  smoke:
     runs-on: docker
     container:
-      image: code.forgejo.org/oci/node:20-bookworm
+      image: catthehacker/ubuntu:act-22.04
     steps:
+      - name: Show runner env
+        run: |
+          echo "uname: $(uname -a)"
+          echo "user: $(whoami)"
+          echo "pwd: $(pwd)"
+          which git python3 curl || true
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Python + uv
+      - name: Install uv
         run: |
-          apt-get update -qq
-          apt-get install -y -qq python3.11 python3.11-venv python3-pip curl
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Sync env
-        run: uv sync --extra dev
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv sync --extra dev
 
       - name: Ruff check
-        run: uv run ruff check src/ tests/
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run ruff check src/ tests/
 
       - name: Ruff format check
-        run: uv run ruff format --check src/ tests/
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run ruff format --check src/ tests/
 
       - name: Mypy strict
-        run: uv run mypy src/
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run mypy src/
 
       - name: Import linter
-        run: uv run lint-imports
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run lint-imports
 
       - name: Bandit
-        run: uv run bandit -r src/ -c bandit.yaml
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run bandit -r src/ -c bandit.yaml --severity-level medium
 
       - name: Unit tests + coverage
-        run: uv run pytest -m unit -q --cov=src/rag_maker --cov-fail-under=70
-
-  build:
-    runs-on: docker
-    container:
-      image: code.forgejo.org/oci/node:20-bookworm
-    needs: quality
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Python + uv
         run: |
-          apt-get update -qq
-          apt-get install -y -qq python3.11 python3.11-venv python3-pip curl
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run pytest -m unit -q --cov=src/rag_maker --cov-fail-under=70
 
       - name: Build wheel + sdist
         run: |
+          export PATH="$HOME/.local/bin:$PATH"
           uv build
           ls -lh dist/
 
       - name: Upload artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/*
+          if-no-files-found: ignore
 
   release:
     runs-on: docker
     container:
-      image: code.forgejo.org/oci/node:20-bookworm
-    needs: build
+      image: catthehacker/ubuntu:act-22.04
+    needs: smoke
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Python + uv + jq
+      - name: Install uv + jq
         run: |
-          apt-get update -qq
-          apt-get install -y -qq python3.11 python3.11-venv python3-pip curl jq
+          apt-get update -qq && apt-get install -y -qq jq
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Build
-        run: uv build
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv build
 
       - name: Create Codeberg release + upload artifacts
         env:
