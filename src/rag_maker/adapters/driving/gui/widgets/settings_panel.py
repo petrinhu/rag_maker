@@ -141,14 +141,16 @@ class SettingsPanel(QWidget):
 
     def _save(self) -> None:
         try:
-            new_corpus = self._fields["paths.corpus_dir"].text().strip() \
-                if isinstance(self._fields.get("paths.corpus_dir"), QLineEdit) else ""
+            new_corpus = (
+                self._fields["paths.corpus_dir"].text().strip()
+                if isinstance(self._fields.get("paths.corpus_dir"), QLineEdit)
+                else ""
+            )
             for key, widget in self._fields.items():
                 if key in ("paths.corpus_dir", "paths.db_dir"):
                     continue  # corpus_dir vai pelo orquestrador; db_dir e derivado
                 value = (
-                    str(widget.value()) if isinstance(widget, QSpinBox)
-                    else widget.text().strip()
+                    str(widget.value()) if isinstance(widget, QSpinBox) else widget.text().strip()
                 )
                 if value:
                     set_config_value(key, value)

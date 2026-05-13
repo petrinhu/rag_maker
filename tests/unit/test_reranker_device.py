@@ -49,16 +49,12 @@ class TestResolveDevice:
 
         assert _resolve_device("auto") == "cuda"
 
-    def test_auto_falls_back_to_cpu_when_vram_low(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_auto_falls_back_to_cpu_when_vram_low(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _mock_cuda(monkeypatch, available=True, free_mib=_MIN_CUDA_FREE_MIB - 100)
 
         assert _resolve_device("auto") == "cpu"
 
-    def test_auto_falls_back_when_mem_get_info_fails(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_auto_falls_back_when_mem_get_info_fails(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import torch
 
         monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
@@ -95,9 +91,7 @@ class TestResolveDevice:
 
 @pytest.mark.unit
 class TestRerankerInitResolvesDevice:
-    def test_init_with_auto_stores_resolved_device(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_init_with_auto_stores_resolved_device(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _mock_cuda(monkeypatch, available=False)
 
         reranker = CrossEncoderReranker(device="auto")
@@ -135,9 +129,7 @@ class TestIsCudaOom:
 
 @pytest.mark.unit
 class TestRerankerOomFallback:
-    def test_falls_back_to_cpu_on_cuda_oom_at_load(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_falls_back_to_cpu_on_cuda_oom_at_load(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _mock_cuda(monkeypatch, available=True, free_mib=_MIN_CUDA_FREE_MIB + 1000)
 
         calls: list[dict[str, Any]] = []
@@ -175,9 +167,7 @@ class TestRerankerOomFallback:
             reranker._get_model()
         assert reranker._device == "cuda"  # não degradou
 
-    def test_no_fallback_when_device_is_already_cpu(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_no_fallback_when_device_is_already_cpu(self, monkeypatch: pytest.MonkeyPatch) -> None:
         class _FakeModel:
             def __init__(self, model_name: str, device: str) -> None:
                 raise RuntimeError("out of memory on cpu")
@@ -253,9 +243,7 @@ class TestRerankPredictOomFallback:
         assert len(results) == 3
         assert [r.chunk.chunk_id for r in results] == ["c0", "c1", "c2"]
 
-    def test_predict_non_oom_error_propagates(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_predict_non_oom_error_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from pathlib import Path
 
         from rag_maker.domain.models import Chunk, RetrievedChunk

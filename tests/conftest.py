@@ -5,7 +5,9 @@ import pytest
 
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "unit: testes unitários puros (sem I/O)")
-    config.addinivalue_line("markers", "integration: testes com I/O real ou mocks de serviços externos")
+    config.addinivalue_line(
+        "markers", "integration: testes com I/O real ou mocks de serviços externos"
+    )
     config.addinivalue_line("markers", "e2e: testes de ponta a ponta via subprocess")
 
 

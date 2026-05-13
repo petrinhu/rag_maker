@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import httpx
 import pytest
 import respx
-import httpx
 
 from rag_maker.adapters.driven.ollama.embedder import OllamaEmbedder
 from rag_maker.domain.models import DimensionMismatchError, EmbeddingError

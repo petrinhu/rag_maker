@@ -1,28 +1,27 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from rag_maker.domain.models import (
     Chunk,
+    DimensionMismatchError,
     Document,
     EmbeddingError,
-    DimensionMismatchError,
     IndexedChunk,
     LoadError,
     ModelNotFoundError,
     OllamaUnavailableError,
     QueryResult,
-    RankedChunk,
-    RetrievedChunk,
 )
-from pathlib import Path
 
 
 @pytest.mark.unit
 class TestDocument:
     def test_frozen(self) -> None:
         doc = Document(path=Path("a.txt"), content="x", content_hash="abc", mtime=0.0)
-        with pytest.raises(Exception):
+        with pytest.raises((AttributeError, TypeError)):
             doc.path = Path("b.txt")  # type: ignore[misc]
 
     def test_equality(self) -> None:
@@ -31,8 +30,12 @@ class TestDocument:
         assert doc1 == doc2
 
     def test_metadata_excluded_from_equality(self) -> None:
-        doc1 = Document(path=Path("a.txt"), content="x", content_hash="abc", mtime=1.0, metadata={"k": "1"})
-        doc2 = Document(path=Path("a.txt"), content="x", content_hash="abc", mtime=1.0, metadata={"k": "2"})
+        doc1 = Document(
+            path=Path("a.txt"), content="x", content_hash="abc", mtime=1.0, metadata={"k": "1"}
+        )
+        doc2 = Document(
+            path=Path("a.txt"), content="x", content_hash="abc", mtime=1.0, metadata={"k": "2"}
+        )
         assert doc1 == doc2
 
     def test_default_metadata_empty(self) -> None:
@@ -53,7 +56,7 @@ class TestChunk:
 
     def test_frozen(self) -> None:
         c = self._make()
-        with pytest.raises(Exception):
+        with pytest.raises((AttributeError, TypeError)):
             c.content = "x"  # type: ignore[misc]
 
     def test_optional_fields_default_none(self) -> None:
@@ -64,7 +67,8 @@ class TestChunk:
     def test_hashable(self) -> None:
         c = self._make()
         assert hash(c) is not None
-        {c}  # deve ser usável como key de set
+        s = {c}  # deve ser usavel como key de set
+        assert c in s
 
 
 @pytest.mark.unit
@@ -77,7 +81,7 @@ class TestIndexedChunk:
     def test_frozen(self) -> None:
         chunk = Chunk(chunk_id="x", document_path=Path("a"), content="hi", char_offset=0, mtime=0.0)
         ic = IndexedChunk(chunk=chunk, vector=(0.1,))
-        with pytest.raises(Exception):
+        with pytest.raises((AttributeError, TypeError)):
             ic.vector = (0.2,)  # type: ignore[misc]
 
 

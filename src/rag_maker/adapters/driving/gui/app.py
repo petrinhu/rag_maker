@@ -28,19 +28,19 @@ def _apply_fusion_dark(app: QApplication) -> None:
     app.setStyle("Fusion")
     c = QColor
     dark = QPalette()
-    dark.setColor(QPalette.ColorRole.Window,          c(53,  53,  53))
-    dark.setColor(QPalette.ColorRole.WindowText,      c(255, 255, 255))
-    dark.setColor(QPalette.ColorRole.Base,            c(35,  35,  35))
-    dark.setColor(QPalette.ColorRole.AlternateBase,   c(53,  53,  53))
-    dark.setColor(QPalette.ColorRole.ToolTipBase,     c(25,  25,  25))
-    dark.setColor(QPalette.ColorRole.ToolTipText,     c(255, 255, 255))
-    dark.setColor(QPalette.ColorRole.Text,            c(255, 255, 255))
-    dark.setColor(QPalette.ColorRole.Button,          c(53,  53,  53))
-    dark.setColor(QPalette.ColorRole.ButtonText,      c(255, 255, 255))
-    dark.setColor(QPalette.ColorRole.BrightText,      c(255,   0,   0))
-    dark.setColor(QPalette.ColorRole.Link,            c(42,  130, 218))
-    dark.setColor(QPalette.ColorRole.Highlight,       c(42,  130, 218))
-    dark.setColor(QPalette.ColorRole.HighlightedText, c(35,  35,  35))
+    dark.setColor(QPalette.ColorRole.Window, c(53, 53, 53))
+    dark.setColor(QPalette.ColorRole.WindowText, c(255, 255, 255))
+    dark.setColor(QPalette.ColorRole.Base, c(35, 35, 35))
+    dark.setColor(QPalette.ColorRole.AlternateBase, c(53, 53, 53))
+    dark.setColor(QPalette.ColorRole.ToolTipBase, c(25, 25, 25))
+    dark.setColor(QPalette.ColorRole.ToolTipText, c(255, 255, 255))
+    dark.setColor(QPalette.ColorRole.Text, c(255, 255, 255))
+    dark.setColor(QPalette.ColorRole.Button, c(53, 53, 53))
+    dark.setColor(QPalette.ColorRole.ButtonText, c(255, 255, 255))
+    dark.setColor(QPalette.ColorRole.BrightText, c(255, 0, 0))
+    dark.setColor(QPalette.ColorRole.Link, c(42, 130, 218))
+    dark.setColor(QPalette.ColorRole.Highlight, c(42, 130, 218))
+    dark.setColor(QPalette.ColorRole.HighlightedText, c(35, 35, 35))
     for role in (
         QPalette.ColorRole.ButtonText,
         QPalette.ColorRole.WindowText,
@@ -66,6 +66,7 @@ def _global_except_hook(
     exc_tb: types.TracebackType | None,
 ) -> None:
     import traceback
+
     msg = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
     QMessageBox.critical(None, "Erro inesperado", msg)
     sys.exit(1)
@@ -73,6 +74,7 @@ def _global_except_hook(
 
 def main() -> None:
     import logging
+
     logging.getLogger("pypdf").setLevel(logging.ERROR)
 
     _ensure_platform_theme()

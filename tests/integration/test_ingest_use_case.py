@@ -16,6 +16,7 @@ CORPUS_MINI = Path(__file__).parent.parent / "fixtures" / "corpus_mini"
 
 # ── Fakes ─────────────────────────────────────────────────────────────────────
 
+
 class _FakeEmbedder:
     _DIM = 4
 
@@ -45,6 +46,7 @@ class _FailingEmbedder:
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture()
 def db_path(tmp_path: Path) -> Path:
     p = tmp_path / "db"
@@ -73,6 +75,7 @@ def use_case(store: LanceVectorStore, cfg: AppConfig) -> IngestUseCase:
 
 
 # ── scan_changes ──────────────────────────────────────────────────────────────
+
 
 @pytest.mark.integration()
 def test_scan_all_new_when_manifest_empty(use_case: IngestUseCase) -> None:
@@ -124,6 +127,7 @@ def test_scan_detects_modified_file(use_case: IngestUseCase, tmp_path: Path) -> 
 
 # ── ingest_incremental ────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration()
 def test_incremental_adds_chunks_to_store(use_case: IngestUseCase, store: LanceVectorStore) -> None:
     report = use_case.ingest_incremental(CORPUS_MINI)
@@ -160,9 +164,7 @@ def test_incremental_removes_deleted_source(
 
 
 @pytest.mark.integration()
-def test_embedding_error_recorded_not_raised(
-    store: LanceVectorStore, cfg: AppConfig
-) -> None:
+def test_embedding_error_recorded_not_raised(store: LanceVectorStore, cfg: AppConfig) -> None:
     uc = IngestUseCase(
         embedder=_FailingEmbedder(),
         store=store,
@@ -175,6 +177,7 @@ def test_embedding_error_recorded_not_raised(
 
 
 # ── recreate_all ──────────────────────────────────────────────────────────────
+
 
 @pytest.mark.integration()
 def test_recreate_all_rebuilds_index(use_case: IngestUseCase, store: LanceVectorStore) -> None:

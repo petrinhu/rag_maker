@@ -52,9 +52,7 @@ class _FakeStore:
 
 
 class _FakeReranker:
-    def rerank(
-        self, query: str, chunks: list[RetrievedChunk], top_k: int
-    ) -> list[RankedChunk]:
+    def rerank(self, query: str, chunks: list[RetrievedChunk], top_k: int) -> list[RankedChunk]:
         return []
 
 
@@ -66,9 +64,7 @@ def cfg_file(tmp_path: Path) -> Path:
     cfg = tmp_path / "config.toml"
     corpus = tmp_path / "corpus_A"
     corpus.mkdir()
-    cfg.write_text(
-        f'[paths]\ncorpus_dir = "{corpus}"\ndb_dir = "{corpus / "rag"}"\n'
-    )
+    cfg.write_text(f'[paths]\ncorpus_dir = "{corpus}"\ndb_dir = "{corpus / "rag"}"\n')
     return cfg
 
 
@@ -120,9 +116,7 @@ def test_rebind_to_same_dir_returns_false(container: Container) -> None:
 
 
 @pytest.mark.unit()
-def test_rebind_to_nonexistent_raises_value_error(
-    container: Container, tmp_path: Path
-) -> None:
+def test_rebind_to_nonexistent_raises_value_error(container: Container, tmp_path: Path) -> None:
     missing = tmp_path / "does_not_exist"
 
     with pytest.raises(ValueError, match="nao encontrada"):
@@ -130,9 +124,7 @@ def test_rebind_to_nonexistent_raises_value_error(
 
 
 @pytest.mark.unit()
-def test_rebind_with_incompatible_dim_raises(
-    container: Container, tmp_path: Path
-) -> None:
+def test_rebind_with_incompatible_dim_raises(container: Container, tmp_path: Path) -> None:
     new_corpus = tmp_path / "corpus_C"
     rag = new_corpus / "rag"
     rag.mkdir(parents=True)
@@ -149,9 +141,7 @@ def test_rebind_with_incompatible_dim_raises(
 
 
 @pytest.mark.unit()
-def test_rebind_preserves_embedding_dim(
-    container: Container, tmp_path: Path
-) -> None:
+def test_rebind_preserves_embedding_dim(container: Container, tmp_path: Path) -> None:
     new_corpus = tmp_path / "corpus_D"
     new_corpus.mkdir()
 
@@ -161,9 +151,7 @@ def test_rebind_preserves_embedding_dim(
 
 
 @pytest.mark.unit()
-def test_rebind_swaps_store_ingest_query(
-    container: Container, tmp_path: Path
-) -> None:
+def test_rebind_swaps_store_ingest_query(container: Container, tmp_path: Path) -> None:
     old_store = container.store
     old_ingest = container.ingest
     old_query = container.query

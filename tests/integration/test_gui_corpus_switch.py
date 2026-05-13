@@ -69,9 +69,7 @@ class _FakeStore:
 
 
 class _FakeReranker:
-    def rerank(
-        self, query: str, chunks: list[RetrievedChunk], top_k: int
-    ) -> list[RankedChunk]:
+    def rerank(self, query: str, chunks: list[RetrievedChunk], top_k: int) -> list[RankedChunk]:
         return []
 
 

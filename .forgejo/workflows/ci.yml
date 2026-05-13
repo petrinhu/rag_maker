@@ -11,73 +11,62 @@ jobs:
   quality:
     runs-on: docker
     container:
-      image: python:3.11-slim
+      image: code.forgejo.org/oci/node:20-bookworm
     steps:
-      - name: Install deps
-        run: |
-          apt-get update -qq && apt-get install -y -qq curl git
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Sync env
+      - name: Install Python + uv
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv sync --extra dev
+          apt-get update -qq
+          apt-get install -y -qq python3.11 python3.11-venv python3-pip curl
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Sync env
+        run: uv sync --extra dev
 
       - name: Ruff check
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv run ruff check src/ tests/
+        run: uv run ruff check src/ tests/
 
       - name: Ruff format check
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv run ruff format --check src/ tests/
+        run: uv run ruff format --check src/ tests/
 
       - name: Mypy strict
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv run mypy src/
+        run: uv run mypy src/
 
       - name: Import linter
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv run lint-imports
+        run: uv run lint-imports
 
       - name: Bandit
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv run bandit -r src/ -c bandit.yaml
+        run: uv run bandit -r src/ -c bandit.yaml
 
       - name: Unit tests + coverage
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv run pytest -m unit -q --cov=src/rag_maker --cov-fail-under=70
+        run: uv run pytest -m unit -q --cov=src/rag_maker --cov-fail-under=70
 
   build:
     runs-on: docker
     container:
-      image: python:3.11-slim
+      image: code.forgejo.org/oci/node:20-bookworm
     needs: quality
     steps:
-      - name: Install uv
-        run: |
-          apt-get update -qq && apt-get install -y -qq curl git
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Python + uv
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq python3.11 python3.11-venv python3-pip curl
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Build wheel + sdist
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
           uv build
           ls -lh dist/
 
       - name: Upload artifacts
-        uses: forgejo/upload-artifact@v4
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/*
@@ -85,33 +74,35 @@ jobs:
   release:
     runs-on: docker
     container:
-      image: python:3.11-slim
+      image: code.forgejo.org/oci/node:20-bookworm
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
-      - name: Install uv + tools
-        run: |
-          apt-get update -qq && apt-get install -y -qq curl git jq
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build
+      - name: Install Python + uv + jq
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv build
+          apt-get update -qq
+          apt-get install -y -qq python3.11 python3.11-venv python3-pip curl jq
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Create Codeberg release
+      - name: Build
+        run: uv build
+
+      - name: Create Codeberg release + upload artifacts
         env:
           TOKEN: ${{ secrets.CLAUDIO_RAG }}
           TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
         run: |
-          API="https://codeberg.org/api/v1/repos/${{ github.repository }}"
+          set -e
+          API="https://codeberg.org/api/v1/repos/$REPO"
           REL=$(curl -sf -X POST -H "Authorization: token $TOKEN" \
             -H "Content-Type: application/json" \
             "$API/releases" \
-            -d "{\"tag_name\":\"$TAG\",\"name\":\"$TAG\",\"draft\":false,\"prerelease\":false}")
+            -d "{\"tag_name\":\"$TAG\",\"name\":\"$TAG\",\"draft\":false,\"prerelease\":false}" || true)
           REL_ID=$(echo "$REL" | jq -r '.id // empty')
           if [ -z "$REL_ID" ]; then
             REL_ID=$(curl -sf -H "Authorization: token $TOKEN" "$API/releases/tags/$TAG" | jq -r '.id')

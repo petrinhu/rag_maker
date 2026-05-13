@@ -16,10 +16,10 @@ from rag_maker.domain.ports.embedder import EmbedderPort
 from rag_maker.domain.ports.loader import LoaderPort
 from rag_maker.domain.ports.vector_store import VectorStorePort
 
-ProgressFn       = Callable[[str, int, int], None]   # (filename, current, total)
-FileDoneFn       = Callable[[str, bool, str], None]  # (filename, success, error_msg)
+ProgressFn = Callable[[str, int, int], None]  # (filename, current, total)
+FileDoneFn = Callable[[str, bool, str], None]  # (filename, success, error_msg)
 ShouldContinueFn = Callable[[], bool]
-ChunkProgressFn  = Callable[[int, int], None]        # (current_chunk, total_chunks)
+ChunkProgressFn = Callable[[int, int], None]  # (current_chunk, total_chunks)
 
 
 class _IngestionStopped(Exception):
@@ -85,7 +85,10 @@ class IngestUseCase:
         tmp = self._manifest_path.with_suffix(".json.tmp")
         with open(tmp, "w") as f:
             json.dump(
-                {k: {"mtime": v.mtime, "content_hash": v.content_hash} for k, v in manifest.items()},
+                {
+                    k: {"mtime": v.mtime, "content_hash": v.content_hash}
+                    for k, v in manifest.items()
+                },
                 f,
                 indent=2,
             )
@@ -100,7 +103,9 @@ class IngestUseCase:
         except Exception:
             return False
 
-    def _repair_manifest_from_store(self, manifest: dict[str, _ManifestEntry]) -> dict[str, _ManifestEntry]:
+    def _repair_manifest_from_store(
+        self, manifest: dict[str, _ManifestEntry]
+    ) -> dict[str, _ManifestEntry]:
         """Se o manifest estiver vazio mas o store tiver dados, reconstrói a partir do LanceDB."""
         if manifest:
             return manifest

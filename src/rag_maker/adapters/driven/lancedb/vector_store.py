@@ -34,17 +34,19 @@ class LanceVectorStore:
     # ── Schema ────────────────────────────────────────────────────────────────
 
     def _schema(self) -> pa.Schema:
-        return pa.schema([
-            pa.field("chunk_id", pa.string()),
-            pa.field("vector", pa.list_(pa.float32(), self._dim)),
-            pa.field("text", pa.string()),
-            pa.field("source_path", pa.string()),
-            pa.field("char_offset", pa.int64()),
-            pa.field("page", pa.int64(), nullable=True),
-            pa.field("section", pa.string(), nullable=True),
-            pa.field("content_hash", pa.string()),
-            pa.field("mtime", pa.float64()),
-        ])
+        return pa.schema(
+            [
+                pa.field("chunk_id", pa.string()),
+                pa.field("vector", pa.list_(pa.float32(), self._dim)),
+                pa.field("text", pa.string()),
+                pa.field("source_path", pa.string()),
+                pa.field("char_offset", pa.int64()),
+                pa.field("page", pa.int64(), nullable=True),
+                pa.field("section", pa.string(), nullable=True),
+                pa.field("content_hash", pa.string()),
+                pa.field("mtime", pa.float64()),
+            ]
+        )
 
     def _open_or_create(self) -> Any:
         response = self._db.list_tables()
@@ -106,10 +108,7 @@ class LanceVectorStore:
     ) -> list[RetrievedChunk]:
         # Dense (HNSW cosine)
         dense_rows: list[dict[str, Any]] = (
-            self._table.search(list(vector))
-            .metric("cosine")
-            .limit(top_n)
-            .to_list()
+            self._table.search(list(vector)).metric("cosine").limit(top_n).to_list()
         )
         dense_ids = [str(r["chunk_id"]) for r in dense_rows]
 
@@ -117,11 +116,7 @@ class LanceVectorStore:
         lexical_rows: list[dict[str, Any]] = []
         lexical_ids: list[str] = []
         try:
-            lexical_rows = (
-                self._table.search(text, query_type="fts")
-                .limit(top_n)
-                .to_list()
-            )
+            lexical_rows = self._table.search(text, query_type="fts").limit(top_n).to_list()
             lexical_ids = [str(r["chunk_id"]) for r in lexical_rows]
         except Exception:
             pass
@@ -135,8 +130,7 @@ class LanceVectorStore:
             all_rows[str(r["chunk_id"])] = r
 
         dense_score_map = {
-            str(r["chunk_id"]): max(0.0, 1.0 - float(r.get("_distance", 1.0)))
-            for r in dense_rows
+            str(r["chunk_id"]): max(0.0, 1.0 - float(r.get("_distance", 1.0))) for r in dense_rows
         }
         lexical_set = set(lexical_ids)
 
@@ -168,6 +162,7 @@ class LanceVectorStore:
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _to_row(ic: IndexedChunk) -> dict[str, Any]:
     return {

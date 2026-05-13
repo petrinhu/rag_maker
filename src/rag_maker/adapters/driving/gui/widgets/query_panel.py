@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 
@@ -99,7 +100,9 @@ class QueryPanel(QWidget):
         top_k = self._k_slider.value()
         self._search_btn.setEnabled(False)
         self._search_edit.setPlaceholderText("Consulta em linguagem natural…")
-        self._status_label.setText("Buscando… (primeira query pode demorar enquanto o modelo carrega)")
+        self._status_label.setText(
+            "Buscando… (primeira query pode demorar enquanto o modelo carrega)"
+        )
         self._worker = QueryWorker(self._container.query, query, top_k)
         self._worker.finished.connect(self._on_results)
         self._worker.error.connect(self._on_error)
@@ -117,7 +120,9 @@ class QueryPanel(QWidget):
             self._table.setItem(row, 2, QTableWidgetItem(str(rc.chunk.page or "—")))
             self._table.setItem(row, 3, QTableWidgetItem(rc.chunk.content[:120].replace("\n", " ")))
         if self._results:
-            self._status_label.setText(f"{len(self._results)} resultados em {result.latency_ms:.0f} ms")
+            self._status_label.setText(
+                f"{len(self._results)} resultados em {result.latency_ms:.0f} ms"
+            )
         else:
             self._status_label.setText(f"Nenhum resultado encontrado ({result.latency_ms:.0f} ms)")
 
@@ -141,4 +146,4 @@ class QueryPanel(QWidget):
                 elif sys.platform == "darwin":
                     subprocess.Popen(["open", str(path)])
                 else:
-                    subprocess.Popen(["start", str(path)], shell=True)
+                    os.startfile(str(path))  # type: ignore[attr-defined]

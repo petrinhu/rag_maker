@@ -17,6 +17,7 @@ _DIM = 4
 
 # ── Fakes ─────────────────────────────────────────────────────────────────────
 
+
 class _FakeEmbedder:
     @property
     def dim(self) -> int:
@@ -52,6 +53,7 @@ class _FakeReranker:
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture()
 def db_path(tmp_path: Path) -> Path:
     p = tmp_path / "db"
@@ -61,10 +63,12 @@ def db_path(tmp_path: Path) -> Path:
 
 @pytest.fixture()
 def cfg(db_path: Path) -> AppConfig:
-    return AppConfig.model_validate({
-        "paths": {"db_dir": str(db_path)},
-        "retrieval": {"coarse_top_n": 50, "rerank_top_k": 3},
-    })
+    return AppConfig.model_validate(
+        {
+            "paths": {"db_dir": str(db_path)},
+            "retrieval": {"coarse_top_n": 50, "rerank_top_k": 3},
+        }
+    )
 
 
 @pytest.fixture()
@@ -87,6 +91,7 @@ def query_uc(populated_store: LanceVectorStore, cfg: AppConfig) -> QueryUseCase:
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.integration()
 def test_answer_returns_query_result(query_uc: QueryUseCase) -> None:

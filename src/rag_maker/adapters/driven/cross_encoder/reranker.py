@@ -82,8 +82,7 @@ class CrossEncoderReranker:
             if self._device != "cuda" or not _is_cuda_oom(exc):
                 raise
             _logger.warning(
-                "VRAM insuficiente em CUDA para carregar %s — degradando para CPU. "
-                "Detalhe: %s",
+                "VRAM insuficiente em CUDA para carregar %s — degradando para CPU. Detalhe: %s",
                 self._model_name,
                 exc,
             )
@@ -112,8 +111,7 @@ class CrossEncoderReranker:
             if self._device != "cuda" or not _is_cuda_oom(exc):
                 raise
             _logger.warning(
-                "OOM em CUDA durante predict() — recarregando %s em CPU e refazendo. "
-                "Detalhe: %s",
+                "OOM em CUDA durante predict() — recarregando %s em CPU e refazendo. Detalhe: %s",
                 self._model_name,
                 exc,
             )

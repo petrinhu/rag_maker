@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import pytest
 import httpx
+import pytest
 import respx
 
 from rag_maker.adapters.driven.ollama import manager
@@ -33,10 +33,15 @@ class TestProbe:
 class TestListModels:
     @respx.mock
     def test_returns_model_names(self) -> None:
-        respx.get(_TAGS).respond(200, json={"models": [
-            {"name": "bge-m3:latest"},
-            {"name": "llama2:7b"},
-        ]})
+        respx.get(_TAGS).respond(
+            200,
+            json={
+                "models": [
+                    {"name": "bge-m3:latest"},
+                    {"name": "llama2:7b"},
+                ]
+            },
+        )
         models = manager.list_models(_URL)
         assert "bge-m3:latest" in models
         assert "llama2:7b" in models

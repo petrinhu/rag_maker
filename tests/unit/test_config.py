@@ -74,9 +74,7 @@ class TestAppConfigEnvOverride:
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         toml_path = tmp_path / "config.toml"
-        toml_path.write_bytes(
-            tomli_w.dumps({"paths": {"db_dir": "/from/toml"}}).encode()
-        )
+        toml_path.write_bytes(tomli_w.dumps({"paths": {"db_dir": "/from/toml"}}).encode())
         monkeypatch.setenv("RAG_MAKER_PATHS__DB_DIR", "/from/env")
         cfg = AppConfig.from_file(toml_path)
         assert str(cfg.paths.db_dir) == "/from/env"

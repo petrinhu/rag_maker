@@ -29,19 +29,19 @@ from rag_maker.adapters.driving.gui.workers import IngestWorker, ScanWorker
 from rag_maker.application.ingest_use_case import ChangeReport, IngestReport
 from rag_maker.composition.container import Container, set_config_value
 
-_STATUS_NEW      = "⬆ Novo"
+_STATUS_NEW = "⬆ Novo"
 _STATUS_MODIFIED = "↻ Modificado"
-_STATUS_INDEXED  = "✓ Indexado"
-_STATUS_REMOVED  = "✕ Removido"
+_STATUS_INDEXED = "✓ Indexado"
+_STATUS_REMOVED = "✕ Removido"
 
 _NOTIFY_THRESHOLD_S = 10.0  # notificação de sistema só para operações longas
 
 
 _STATUS_FG: dict[str, str] = {
-    _STATUS_NEW:      "#4A90D9",  # azul médio — legível em fundo claro e escuro
+    _STATUS_NEW: "#4A90D9",  # azul médio — legível em fundo claro e escuro
     _STATUS_MODIFIED: "#D4820A",  # laranja escuro
-    _STATUS_INDEXED:  "#27AE60",  # verde médio
-    _STATUS_REMOVED:  "#C0392B",  # vermelho médio
+    _STATUS_INDEXED: "#27AE60",  # verde médio
+    _STATUS_REMOVED: "#C0392B",  # vermelho médio
 }
 
 
@@ -72,9 +72,9 @@ class _DroppableLineEdit(QLineEdit):
 
 
 class CorpusPanel(QWidget):
-    ingest_done             = Signal(object)   # IngestReport
-    corpus_change_requested = Signal(str)      # usuario selecionou novo corpus
-    notification_requested  = Signal(str, str) # title, message
+    ingest_done = Signal(object)  # IngestReport
+    corpus_change_requested = Signal(str)  # usuario selecionou novo corpus
+    notification_requested = Signal(str, str)  # title, message
 
     def __init__(self, container: Container, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -142,7 +142,9 @@ class CorpusPanel(QWidget):
         self._recreate_btn.setToolTip("Apaga o indice e re-ingere todos os arquivos do zero")
         self._recreate_btn.clicked.connect(self._ingest_full)
         self._summary_label = QLabel("—")
-        self._summary_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self._summary_label.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
         action_row.addWidget(self._ingest_btn)
         action_row.addWidget(self._recreate_btn)
         action_row.addStretch()
@@ -208,10 +210,10 @@ class CorpusPanel(QWidget):
             filter_row.addWidget(btn)
 
         _add_filter(None, "Todos")
-        _add_filter(_STATUS_NEW,      _STATUS_NEW,      _STATUS_FG[_STATUS_NEW])
+        _add_filter(_STATUS_NEW, _STATUS_NEW, _STATUS_FG[_STATUS_NEW])
         _add_filter(_STATUS_MODIFIED, _STATUS_MODIFIED, _STATUS_FG[_STATUS_MODIFIED])
-        _add_filter(_STATUS_INDEXED,  _STATUS_INDEXED,  _STATUS_FG[_STATUS_INDEXED])
-        _add_filter(_STATUS_REMOVED,  _STATUS_REMOVED,  _STATUS_FG[_STATUS_REMOVED])
+        _add_filter(_STATUS_INDEXED, _STATUS_INDEXED, _STATUS_FG[_STATUS_INDEXED])
+        _add_filter(_STATUS_REMOVED, _STATUS_REMOVED, _STATUS_FG[_STATUS_REMOVED])
         filter_row.addStretch()
         files_layout.addLayout(filter_row)
 
@@ -292,7 +294,7 @@ class CorpusPanel(QWidget):
     def _apply_filters(self) -> None:
         search = self._search_edit.text().strip().lower()
         for row in range(self._file_table.rowCount()):
-            name_item   = self._file_table.item(row, 0)
+            name_item = self._file_table.item(row, 0)
             status_item = self._file_table.item(row, 1)
             if name_item is None or status_item is None:
                 self._file_table.setRowHidden(row, False)
@@ -330,7 +332,7 @@ class CorpusPanel(QWidget):
         path = Path(path_item.text())
 
         menu = QMenu(self)
-        act_open   = menu.addAction("Abrir arquivo")
+        act_open = menu.addAction("Abrir arquivo")
         act_folder = menu.addAction("Abrir pasta")
         menu.addSeparator()
         act_remove = menu.addAction("Remover do indice")
@@ -366,21 +368,29 @@ class CorpusPanel(QWidget):
         except Exception:
             sources = {}
 
-        n_new      = len(report.new)
+        n_new = len(report.new)
         n_modified = len(report.modified)
-        n_removed  = len(report.removed)
-        n_indexed  = len(report.unchanged)
+        n_removed = len(report.removed)
+        n_indexed = len(report.unchanged)
         total = n_new + n_modified + n_removed + n_indexed
 
         parts = []
         if n_indexed:
-            parts.append(f"<font color='{_STATUS_FG[_STATUS_INDEXED]}'>{n_indexed} indexado{'s' if n_indexed != 1 else ''}</font>")
+            parts.append(
+                f"<font color='{_STATUS_FG[_STATUS_INDEXED]}'>{n_indexed} indexado{'s' if n_indexed != 1 else ''}</font>"
+            )
         if n_new:
-            parts.append(f"<font color='{_STATUS_FG[_STATUS_NEW]}'>{n_new} novo{'s' if n_new != 1 else ''}</font>")
+            parts.append(
+                f"<font color='{_STATUS_FG[_STATUS_NEW]}'>{n_new} novo{'s' if n_new != 1 else ''}</font>"
+            )
         if n_modified:
-            parts.append(f"<font color='{_STATUS_FG[_STATUS_MODIFIED]}'>{n_modified} modificado{'s' if n_modified != 1 else ''}</font>")
+            parts.append(
+                f"<font color='{_STATUS_FG[_STATUS_MODIFIED]}'>{n_modified} modificado{'s' if n_modified != 1 else ''}</font>"
+            )
         if n_removed:
-            parts.append(f"<font color='{_STATUS_FG[_STATUS_REMOVED]}'>{n_removed} removido{'s' if n_removed != 1 else ''}</font>")
+            parts.append(
+                f"<font color='{_STATUS_FG[_STATUS_REMOVED]}'>{n_removed} removido{'s' if n_removed != 1 else ''}</font>"
+            )
         self._summary_label.setText(" · ".join(parts) if parts else f"{total} obras encontradas")
 
         self._file_table.setSortingEnabled(False)
@@ -447,7 +457,9 @@ class CorpusPanel(QWidget):
     def _remove_selected(self) -> None:
         selected = self._file_table.selectionModel().selectedRows()
         if not selected:
-            QMessageBox.information(self, "Remover", "Selecione uma ou mais obras na lista primeiro.")
+            QMessageBox.information(
+                self, "Remover", "Selecione uma ou mais obras na lista primeiro."
+            )
             return
         paths = [
             item.text()
@@ -461,10 +473,15 @@ class CorpusPanel(QWidget):
         else:
             names = "\n".join(f"  - {Path(p).name}" for p in paths)
             msg = f"Remover {len(paths)} obras do banco vetorial?\n\n{names}\n\nOs arquivos originais nao serao apagados."
-        if QMessageBox.question(
-            self, "Remover do indice", msg,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        ) != QMessageBox.StandardButton.Yes:
+        if (
+            QMessageBox.question(
+                self,
+                "Remover do indice",
+                msg,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            != QMessageBox.StandardButton.Yes
+        ):
             return
         errors = []
         for path_str in paths:
@@ -483,11 +500,15 @@ class CorpusPanel(QWidget):
         self._start_ingest(full=False)
 
     def _ingest_full(self) -> None:
-        if QMessageBox.question(
-            self, "Reconstruir indice",
-            "Apagar todo o indice e re-ingerir do zero?\n\nIsso pode demorar bastante.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        ) == QMessageBox.StandardButton.Yes:
+        if (
+            QMessageBox.question(
+                self,
+                "Reconstruir indice",
+                "Apagar todo o indice e re-ingerir do zero?\n\nIsso pode demorar bastante.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            == QMessageBox.StandardButton.Yes
+        ):
             self._start_ingest(full=True)
 
     def _start_ingest(self, full: bool) -> None:
@@ -521,10 +542,10 @@ class CorpusPanel(QWidget):
         self._progress_bar.setMaximum(total)
         self._progress_bar.setValue(current)
         self._last_filename = filename
-        self._last_current  = current
-        self._last_total    = total
+        self._last_current = current
+        self._last_total = total
         self._chunk_current = 0
-        self._chunk_total   = 1
+        self._chunk_total = 1
         self._file_start_time = time.monotonic()
         if not self._eta_timer.isActive():
             self._eta_timer.start()
@@ -534,13 +555,17 @@ class CorpusPanel(QWidget):
         self._file_progress_bar.setMaximum(total)
         self._file_progress_bar.setValue(current)
         self._chunk_current = current
-        self._chunk_total   = max(total, 1)
+        self._chunk_total = max(total, 1)
         self._refresh_labels()
 
     def _tick_eta(self) -> None:
         """ETA por arquivo: rate = chunks_done / file_elapsed; eta = (total - done) / rate."""
         file_elapsed = time.monotonic() - self._file_start_time
-        if file_elapsed > 1.0 and self._chunk_current > 0 and self._chunk_current < self._chunk_total:
+        if (
+            file_elapsed > 1.0
+            and self._chunk_current > 0
+            and self._chunk_current < self._chunk_total
+        ):
             rate = self._chunk_current / file_elapsed
             self._eta_remaining = (self._chunk_total - self._chunk_current) / rate
         elif self._chunk_current >= self._chunk_total:
@@ -549,7 +574,9 @@ class CorpusPanel(QWidget):
 
     def _refresh_labels(self) -> None:
         eta_part = f"  ETA: {_fmt_eta(self._eta_remaining)}" if self._eta_remaining > 1 else ""
-        file_elapsed = time.monotonic() - self._file_start_time if self._file_start_time > 0 else 0.0
+        file_elapsed = (
+            time.monotonic() - self._file_start_time if self._file_start_time > 0 else 0.0
+        )
         elapsed_part = f"  decorrido: {_fmt_eta(file_elapsed)}" if file_elapsed > 0 else ""
         self._progress_label.setText(
             f"[{self._last_current}/{self._last_total}] {self._last_filename}"

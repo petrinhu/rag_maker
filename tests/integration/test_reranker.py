@@ -32,7 +32,7 @@ class TestCrossEncoderReranker:
     @pytest.mark.skipif(
         not _MODEL_CACHED,
         reason="BAAI/bge-reranker-v2-m3 não está no cache HuggingFace (~500MB). "
-               "Execute 'rag doctor' ou baixe o modelo antes de rodar este teste.",
+        "Execute 'rag doctor' ou baixe o modelo antes de rodar este teste.",
     )
     def test_rerank_orders_by_relevance(self) -> None:
         reranker = CrossEncoderReranker()

@@ -62,14 +62,15 @@ def ensure_model(name: str, url: str, auto_pull: bool = False) -> None:
     if any(m == name or m.split(":")[0] == base for m in models):
         return
     if not auto_pull:
-        raise ModelNotFoundError(
-            f"Modelo '{name}' não encontrado. Execute: ollama pull {name}"
-        )
+        raise ModelNotFoundError(f"Modelo '{name}' não encontrado. Execute: ollama pull {name}")
     _pull(name, url)
 
 
 def _pull(name: str, url: str) -> None:
-    with httpx.Client(timeout=600.0) as client, client.stream("POST", f"{url}/api/pull", json={"name": name, "stream": True}) as r:
+    with (
+        httpx.Client(timeout=600.0) as client,
+        client.stream("POST", f"{url}/api/pull", json={"name": name, "stream": True}) as r,
+    ):
         r.raise_for_status()
         for _ in r.iter_lines():
             pass

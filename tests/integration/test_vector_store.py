@@ -45,10 +45,12 @@ class TestLanceVectorStore:
 
     def test_delete_by_source(self, tmp_path: Path) -> None:
         store = LanceVectorStore(tmp_path, embedding_dim=_DIM)
-        store.upsert([
-            _make_indexed("c1", source="a.txt"),
-            _make_indexed("c2", source="b.txt"),
-        ])
+        store.upsert(
+            [
+                _make_indexed("c1", source="a.txt"),
+                _make_indexed("c2", source="b.txt"),
+            ]
+        )
         store.delete_by_source("a.txt")
         assert store.count() == 1
 
@@ -60,10 +62,12 @@ class TestLanceVectorStore:
 
     def test_hybrid_search_returns_results(self, tmp_path: Path) -> None:
         store = LanceVectorStore(tmp_path, embedding_dim=_DIM)
-        store.upsert([
-            _make_indexed("c1", val=0.9, content="hermetismo e alquimia"),
-            _make_indexed("c2", val=0.1, content="receita de bolo"),
-        ])
+        store.upsert(
+            [
+                _make_indexed("c1", val=0.9, content="hermetismo e alquimia"),
+                _make_indexed("c2", val=0.1, content="receita de bolo"),
+            ]
+        )
         query_vec = tuple([0.9] * _DIM)
         results = store.hybrid_search(query_vec, "hermetismo", top_n=5)
         assert len(results) >= 1

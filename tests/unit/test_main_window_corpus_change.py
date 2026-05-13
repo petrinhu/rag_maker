@@ -62,15 +62,11 @@ def window(
     monkeypatch: pytest.MonkeyPatch,
 ) -> MainWindow:
     # Substitui as classes dos panels antes de construir MainWindow
-    monkeypatch.setattr(
-        "rag_maker.adapters.driving.gui.main_window.CorpusPanel", _StubCorpusPanel
-    )
+    monkeypatch.setattr("rag_maker.adapters.driving.gui.main_window.CorpusPanel", _StubCorpusPanel)
     monkeypatch.setattr(
         "rag_maker.adapters.driving.gui.main_window.SettingsPanel", _StubSettingsPanel
     )
-    monkeypatch.setattr(
-        "rag_maker.adapters.driving.gui.main_window.QueryPanel", _StubQueryPanel
-    )
+    monkeypatch.setattr("rag_maker.adapters.driving.gui.main_window.QueryPanel", _StubQueryPanel)
     # Evita I/O real no statusbar
     monkeypatch.setattr(
         "rag_maker.adapters.driving.gui.main_window.get_store_stats",

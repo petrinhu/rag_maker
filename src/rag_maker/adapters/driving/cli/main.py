@@ -160,7 +160,10 @@ def ingest(
     config = _load_config()
     _raw_corpus = corpus or config.paths.corpus_dir
     if _raw_corpus is None:
-        _abort("corpus_dir não configurado. Use --corpus DIR ou `rag config set paths.corpus_dir PATH`.", EXIT_CONFIG)
+        _abort(
+            "corpus_dir não configurado. Use --corpus DIR ou `rag config set paths.corpus_dir PATH`.",
+            EXIT_CONFIG,
+        )
         return  # mypy: unreachable after _abort
     corpus_dir = _raw_corpus.expanduser().resolve()
     if not corpus_dir.exists():

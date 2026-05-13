@@ -19,6 +19,7 @@ _DIM = 4
 
 # ── Fakes ─────────────────────────────────────────────────────────────────────
 
+
 class _FakeEmbedder:
     @property
     def dim(self) -> int:
@@ -52,13 +53,12 @@ class _FakeStore:
 
 
 class _FakeReranker:
-    def rerank(
-        self, query: str, chunks: list[RetrievedChunk], top_k: int
-    ) -> list[RankedChunk]:
+    def rerank(self, query: str, chunks: list[RetrievedChunk], top_k: int) -> list[RankedChunk]:
         return []
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture()
 def container(tmp_path: Path) -> Container:
@@ -73,6 +73,7 @@ def container(tmp_path: Path) -> Container:
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.unit()
 def test_container_has_correct_types(container: Container) -> None:

@@ -12,14 +12,14 @@ from rag_maker.domain.models import QueryResult
 
 
 class IngestWorker(QThread):
-    finished       = Signal(object)        # IngestReport
-    stopped        = Signal(object)        # IngestReport parcial
-    error          = Signal(str)
-    progress       = Signal(str, int, int) # filename, current, total
-    file_progress  = Signal(int, int)      # chunk_current, chunk_total (dentro do arquivo)
-    file_result    = Signal(str, bool, str)# filename, success, error_msg
-    paused         = Signal()
-    resumed        = Signal()
+    finished = Signal(object)  # IngestReport
+    stopped = Signal(object)  # IngestReport parcial
+    error = Signal(str)
+    progress = Signal(str, int, int)  # filename, current, total
+    file_progress = Signal(int, int)  # chunk_current, chunk_total (dentro do arquivo)
+    file_result = Signal(str, bool, str)  # filename, success, error_msg
+    paused = Signal()
+    resumed = Signal()
 
     def __init__(
         self,
@@ -29,11 +29,11 @@ class IngestWorker(QThread):
         recursive: bool = True,
     ) -> None:
         super().__init__()
-        self._container  = container
+        self._container = container
         self._corpus_dir = corpus_dir
-        self._full       = full
-        self._recursive  = recursive
-        self._stop_event  = threading.Event()
+        self._full = full
+        self._recursive = recursive
+        self._stop_event = threading.Event()
         self._pause_event = threading.Event()
         self._pause_event.set()  # não pausado inicialmente
 
@@ -92,17 +92,19 @@ class IngestWorker(QThread):
 
 class ScanWorker(QThread):
     finished = Signal(object)  # ChangeReport
-    error    = Signal(str)
+    error = Signal(str)
 
     def __init__(self, ingest_uc: IngestUseCase, corpus_dir: Path, recursive: bool = True) -> None:
         super().__init__()
-        self._ingest_uc  = ingest_uc
+        self._ingest_uc = ingest_uc
         self._corpus_dir = corpus_dir
-        self._recursive  = recursive
+        self._recursive = recursive
 
     def run(self) -> None:
         try:
-            report: ChangeReport = self._ingest_uc.scan_changes(self._corpus_dir, recursive=self._recursive)
+            report: ChangeReport = self._ingest_uc.scan_changes(
+                self._corpus_dir, recursive=self._recursive
+            )
             self.finished.emit(report)
         except Exception as exc:
             self.error.emit(str(exc))
@@ -110,13 +112,13 @@ class ScanWorker(QThread):
 
 class QueryWorker(QThread):
     finished = Signal(object)  # QueryResult
-    error    = Signal(str)
+    error = Signal(str)
 
     def __init__(self, query_uc: QueryUseCase, query: str, top_k: int) -> None:
         super().__init__()
         self._query_uc = query_uc
-        self._query    = query
-        self._top_k    = top_k
+        self._query = query
+        self._top_k = top_k
 
     def run(self) -> None:
         try:

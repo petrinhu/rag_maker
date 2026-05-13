@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-import tomli_w
 
 from rag_maker.adapters.driven.config.toml_loader import load_toml, save_toml
 

@@ -176,6 +176,7 @@ _OLLAMA_CANDIDATES = [
 def detect_ollama_url() -> str:
     """Proba candidatos comuns + OLLAMA_HOST; retorna o primeiro que responde."""
     import os
+
     env_host = os.environ.get("OLLAMA_HOST", "").strip()
     candidates = ([env_host] if env_host else []) + _OLLAMA_CANDIDATES
     for url in candidates:
@@ -186,6 +187,7 @@ def detect_ollama_url() -> str:
 
 def list_ollama_models(config: AppConfig) -> list[str]:
     from rag_maker.adapters.driven.ollama.manager import list_models as _list_models
+
     return _list_models(url=config.ollama.url)
 
 
@@ -281,8 +283,8 @@ def build_container(
         _store = store
     else:
         meta = _load_meta(config.paths.resolved_db_dir())
-        dim: int = config.embedding_dim or meta.get("embedding_dim") or len(
-            _embedder.embed("dim probe")
+        dim: int = (
+            config.embedding_dim or meta.get("embedding_dim") or len(_embedder.embed("dim probe"))
         )
         if meta.get("embedding_dim") != dim:
             _save_meta(config.paths.resolved_db_dir(), {**meta, "embedding_dim": dim})
