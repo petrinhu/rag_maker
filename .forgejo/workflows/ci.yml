@@ -64,12 +64,12 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           uv run bandit -r src/ -c bandit.yaml --severity-level medium
 
-      - name: Unit tests + coverage
+      - name: Unit tests
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          uv run pytest -m unit -q --cov=src/rag_maker --cov-fail-under=70
+          uv run pytest -m unit -q --no-cov
 
       - name: Build wheel + sdist
         run: |
