@@ -54,7 +54,7 @@ steps:
       event: tag
     settings:
       api_key:
-        from_secret: codeberg_token
+        from_secret: CLAUDIO_RAG
       base_url: https://codeberg.org
       files:
         - dist/*.whl
