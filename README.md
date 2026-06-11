@@ -2,7 +2,7 @@
 
 [![CI](https://codeberg.org/petrinhu/rag_maker/actions/workflows/ci.yml/badge.svg)](https://codeberg.org/petrinhu/rag_maker/actions)
 [![Release](https://img.shields.io/gitea/v/release/petrinhu/rag_maker?gitea_url=https%3A%2F%2Fcodeberg.org&display_name=tag&sort=semver&label=release)](https://codeberg.org/petrinhu/rag_maker/releases)
-[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![uv](https://img.shields.io/badge/managed%20by-uv-purple)](https://github.com/astral-sh/uv)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-D7FF64.svg)](https://github.com/astral-sh/ruff)
@@ -254,7 +254,7 @@ Quality gates rodam em CI: `ruff check`, `mypy --strict`, `bandit -r src/`, `lin
 
 ## Licença
 
-GPLv3, ver [LICENSE](LICENSE).
+AGPL-3.0, ver [LICENSE](LICENSE).
 
 ---
 
@@ -264,7 +264,7 @@ GPLv3, ver [LICENSE](LICENSE).
 
 [![CI](https://codeberg.org/petrinhu/rag_maker/actions/workflows/ci.yml/badge.svg)](https://codeberg.org/petrinhu/rag_maker/actions)
 [![Release](https://img.shields.io/gitea/v/release/petrinhu/rag_maker?gitea_url=https%3A%2F%2Fcodeberg.org&display_name=tag&sort=semver&label=release)](https://codeberg.org/petrinhu/rag_maker/releases)
-[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 
 Offline **retrieval-only** tool for personal document libraries. Indexes PDF, DOCX, EPUB, TXT, Markdown into a local vector store; serves relevant chunks via **CLI** or **GUI**, so external AIs (Claude Code, ChatGPT, Gemini) can write summaries, articles, and books with real citations.
@@ -453,4 +453,4 @@ Quality gates in CI: `ruff check`, `mypy --strict`, `bandit -r src/`, `lint-impo
 
 ## License
 
-GPLv3, see [LICENSE](LICENSE).
+AGPL-3.0, see [LICENSE](LICENSE).
