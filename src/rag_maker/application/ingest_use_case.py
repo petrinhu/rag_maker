@@ -3,11 +3,12 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import json
+import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 from rag_maker.application.config import AppConfig
 from rag_maker.domain.chunker import RecursiveCharacterChunker
@@ -16,10 +17,28 @@ from rag_maker.domain.ports.embedder import EmbedderPort
 from rag_maker.domain.ports.loader import LoaderPort
 from rag_maker.domain.ports.vector_store import VectorStorePort
 
+logger = logging.getLogger(__name__)
+
 ProgressFn = Callable[[str, int, int], None]  # (filename, current, total)
 FileDoneFn = Callable[[str, bool, str], None]  # (filename, success, error_msg)
 ShouldContinueFn = Callable[[], bool]
 ChunkProgressFn = Callable[[int, int], None]  # (current_chunk, total_chunks)
+
+
+@runtime_checkable
+class _FtsIndexMaintainable(Protocol):
+    """Capacidade opcional de manutenção de índice FTS.
+
+    NÃO faz parte de `VectorStorePort` (domain/ports) porque esta unidade de
+    trabalho está restrita a `ingest_use_case.py` + `vector_store.py`. O
+    adapter LanceDB implementa este método; detectamos via isinstance
+    (Protocol runtime_checkable) para não quebrar outros adapters/fakes que
+    ainda não o implementam. TODO de arquitetura: promover `ensure_fts_index`
+    para `VectorStorePort` oficialmente (requer editar domain/ports/vector_store.py,
+    fora do escopo desta unidade) — ver AUD-TEST-2 em AUDIT_FIND.md.
+    """
+
+    def ensure_fts_index(self) -> None: ...
 
 
 class _IngestionStopped(Exception):
@@ -216,6 +235,18 @@ class IngestUseCase:
                     on_chunk_progress=on_chunk_progress,
                     should_continue=should_continue,
                 )
+                # AUD-CORRECT-1: chunk_id é sha256(path:offset) — NUNCA sensível a
+                # conteúdo. upsert() faz merge_insert("chunk_id") (update/insert,
+                # nunca delete). Se um arquivo MODIFICADO encolhe ou desloca
+                # offsets, chunks antigos ficam órfãos para sempre e continuam
+                # sendo retornados por hybrid_search como se fossem atuais.
+                # Invariante: para reprocessamento de arquivo já indexado, a
+                # substituição precisa ser delete-then-insert (nunca upsert puro).
+                # Arquivos NOVOS não têm nada para apagar; deletar depois de
+                # _ingest_file ter sucesso (não antes) preserva os dados antigos
+                # caso o parse/embedding falhe e a exceção seja capturada abaixo.
+                if str(path) not in new_set:
+                    self._store.delete_by_source(str(path))
                 self._store.upsert(indexed)
                 manifest[str(path)] = _ManifestEntry(
                     mtime=path.stat().st_mtime,
@@ -234,8 +265,27 @@ class IngestUseCase:
                 report.errors.append((str(path), str(exc)))
                 if on_file_done:
                     on_file_done(path.name, False, str(exc))
+
+        # AUD-TEST-2: ensure_fts_index() precisa ser chamado após qualquer
+        # mutação de linhas (upsert ou delete) para que hybrid_search(query_type=
+        # "fts") não opere sobre um índice invertido inexistente/desatualizado —
+        # sem isso a metade lexical da RRF degrada silenciosamente para
+        # dense-only. Reconstruir uma vez ao fim do lote (não por arquivo) é
+        # suficiente e evita custo de rebuild repetido por item.
+        if report.added or report.updated or report.removed:
+            self._ensure_fts_index_if_supported()
+
         report.elapsed_ms = (time.monotonic() - t0) * 1000
         return report
+
+    def _ensure_fts_index_if_supported(self) -> None:
+        if isinstance(self._store, _FtsIndexMaintainable):
+            self._store.ensure_fts_index()
+        else:
+            logger.warning(
+                "vector_store_no_fts_maintenance",
+                extra={"store_type": type(self._store).__name__},
+            )
 
     def recreate_all(
         self,

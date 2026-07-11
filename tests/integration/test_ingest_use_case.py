@@ -164,6 +164,53 @@ def test_incremental_removes_deleted_source(
 
 
 @pytest.mark.integration()
+def test_incremental_removes_orphan_chunks_when_file_shrinks(
+    store: LanceVectorStore, cfg: AppConfig, tmp_path: Path
+) -> None:
+    """AUD-CORRECT-1 (regressão): chunk_id = sha256(path:offset) NUNCA depende
+    de conteúdo. upsert() faz merge_insert("chunk_id") — só update/insert,
+    nunca delete. No branch `modified` de ingest_incremental, reingerir sem
+    delete_by_source antes deixava os chunks antigos (de offsets que não
+    existem mais na versão nova) órfãos para sempre no LanceDB, e eles
+    continuavam sendo retornados por hybrid_search como se fossem atuais.
+
+    Repro do achado: 'A' * 3000 -> 4 chunks (size=1000/overlap=200 default);
+    editar para 'B' * 20 -> 1 chunk só. Sem o fix, count ficava em 4 (3
+    chunks 'AAAA...' órfãos); com o fix, count deve virar 1.
+    """
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    f = corpus / "shrinking.txt"
+    f.write_text("A" * 3000)
+    uc = IngestUseCase(embedder=_FakeEmbedder(), store=store, loader_for=loader_for, config=cfg)
+
+    report1 = uc.ingest_incremental(corpus)
+    assert report1.added == 1
+    assert report1.errors == []
+    count_before = store.count()
+    assert count_before == 4, "fixture pressupõe 4 chunks para 'A'*3000 com size=1000/overlap=200"
+
+    time.sleep(0.05)  # garante mtime diferente para scan_changes detectar 'modified'
+    f.write_text("B" * 20)
+    report2 = uc.ingest_incremental(corpus)
+    assert report2.updated == 1
+    assert report2.errors == []
+
+    # Nenhum chunk órfão: count bate exatamente com o conteúdo NOVO (1 chunk).
+    assert store.count() == 1
+    sources = store.list_sources()
+    assert sources[str(f)] == 1
+
+    # Conjunto de chunk_ids/conteúdo bate com o novo texto — nenhum resquício
+    # da versão antiga ('AAAA...') sobrevive no índice.
+    query_vec = tuple(_FakeEmbedder().embed("B" * 20))
+    results = store.hybrid_search(query_vec, "B" * 20, top_n=10)
+    assert len(results) == 1
+    assert results[0].chunk.content == "B" * 20
+    assert all("A" * 10 not in r.chunk.content for r in results)
+
+
+@pytest.mark.integration()
 def test_embedding_error_recorded_not_raised(store: LanceVectorStore, cfg: AppConfig) -> None:
     uc = IngestUseCase(
         embedder=_FailingEmbedder(),

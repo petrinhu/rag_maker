@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import contextlib
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +9,8 @@ import pyarrow as pa
 
 from rag_maker.domain.models import Chunk, IndexedChunk, RetrievedChunk
 from rag_maker.domain.scoring import rrf_fuse
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_TABLE = "chunks"
 
@@ -112,14 +114,24 @@ class LanceVectorStore:
         )
         dense_ids = [str(r["chunk_id"]) for r in dense_rows]
 
-        # Lexical (FTS)
+        # Lexical (FTS). AUD-TEST-2: sem create_fts_index() prévio (ver
+        # ensure_fts_index), o LanceDB levanta RuntimeError aqui — degradar
+        # para dense-only é aceitável como fallback, mas NUNCA em silêncio:
+        # sem o log abaixo, um índice FTS ausente/corrompido produz retrieval
+        # pior indefinidamente sem qualquer sinal operacional.
         lexical_rows: list[dict[str, Any]] = []
         lexical_ids: list[str] = []
         try:
             lexical_rows = self._table.search(text, query_type="fts").limit(top_n).to_list()
             lexical_ids = [str(r["chunk_id"]) for r in lexical_rows]
         except Exception:
-            pass
+            logger.warning(
+                "hybrid_search_fts_unavailable table=%s: busca lexical falhou, "
+                "degradando para dense-only. Verifique se ensure_fts_index() foi "
+                "chamado após o último upsert/delete nesta tabela.",
+                self._table_name,
+                exc_info=True,
+            )
 
         # RRF fusion
         rrf_scores = rrf_fuse(dense_ids, lexical_ids)
@@ -153,12 +165,34 @@ class LanceVectorStore:
     # ── Manutenção de índices ─────────────────────────────────────────────────
 
     def ensure_fts_index(self) -> None:
-        with contextlib.suppress(Exception):
+        # AUD-TEST-2: chamado por IngestUseCase ao fim de ingest_incremental
+        # (cobre recreate_all por delegação). Tabela vazia (0 linhas) faz o
+        # LanceDB recusar a criação do índice invertido — isso é esperado
+        # (nada para indexar ainda) e não deve virar warning.
+        try:
             self._table.create_fts_index("text", replace=True)
+        except Exception:
+            if self._table.count_rows() > 0:
+                logger.warning(
+                    "ensure_fts_index_failed table=%s: (re)criação do índice FTS "
+                    "falhou com linhas presentes — busca lexical ficará "
+                    "indisponível até a próxima tentativa bem-sucedida.",
+                    self._table_name,
+                    exc_info=True,
+                )
 
     def ensure_vector_index(self) -> None:
-        with contextlib.suppress(Exception):
+        try:
             self._table.create_index(metric="cosine", replace=True)
+        except Exception:
+            if self._table.count_rows() > 0:
+                logger.warning(
+                    "ensure_vector_index_failed table=%s: (re)criação do "
+                    "índice HNSW falhou com linhas presentes — busca densa "
+                    "fará fallback para flat scan (mais lento).",
+                    self._table_name,
+                    exc_info=True,
+                )
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
