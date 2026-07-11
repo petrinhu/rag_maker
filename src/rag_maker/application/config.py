@@ -63,6 +63,24 @@ class GuiConfig(BaseModel):
     recursive_scan: bool = True
 
 
+class LoadersConfig(BaseModel):
+    """Tetos anti-DoS aplicados pelos loaders (AUD-INPUT-2/AUD-TEST-3/3b).
+
+    Os valores aqui espelham (duplicados intencionalmente, não importados)
+    os defaults efetivos em `adapters/driven/loaders/_utils.py` — a regra
+    hexagonal proíbe `application/` de importar `adapters/`. Esta classe é a
+    superfície de configuração documentada para wiring futuro via
+    `composition/container`; os loaders já protegem contra zip bomb, arquivo
+    gigante e texto extraído sem limite mesmo sem essa injeção, usando os
+    mesmos defaults por construtor.
+    """
+
+    max_file_mb: float = 100.0
+    max_uncompressed_mb: float = 500.0
+    max_compression_ratio: float = 100.0
+    max_extracted_chars: int = 20_000_000
+
+
 class AppConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="RAG_MAKER_",
@@ -77,6 +95,7 @@ class AppConfig(BaseSettings):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     ignored: IgnoredConfig = Field(default_factory=IgnoredConfig)
     gui: GuiConfig = Field(default_factory=GuiConfig)
+    loaders: LoadersConfig = Field(default_factory=LoadersConfig)
     embedding_dim: int | None = None  # preenchido em runtime após primeiro embed
 
     @classmethod
