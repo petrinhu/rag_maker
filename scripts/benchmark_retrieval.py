@@ -5,17 +5,18 @@ Uso:
 
 Requer corpus já ingerido e Ollama rodando.
 """
+
 from __future__ import annotations
 
 import argparse
 import statistics
 import time
-from pathlib import Path
 
 from rich.console import Console
 from rich.table import Table
 
 from rag_maker.composition.container import build_container, get_config_path
+from rag_maker.domain.models import RetrievedChunk
 
 console = Console()
 
@@ -43,7 +44,7 @@ def benchmark(query: str, repeats: int = 5, top_k: int = 8) -> None:
     # ── Search (hybrid HNSW + FTS) ────────────────────────────────────────────
     search_times: list[float] = []
     coarse_top_n = container.config.retrieval.coarse_top_n
-    retrieved: list = []
+    retrieved: list[RetrievedChunk] = []
     for _ in range(repeats):
         t0 = time.perf_counter()
         retrieved = store.hybrid_search(vec, query, coarse_top_n)
@@ -57,7 +58,9 @@ def benchmark(query: str, repeats: int = 5, top_k: int = 8) -> None:
         rerank_times.append(time.perf_counter() - t0)
 
     # ── Totals ────────────────────────────────────────────────────────────────
-    total_times = [e + s + r for e, s, r in zip(embed_times, search_times, rerank_times)]
+    total_times = [
+        e + s + r for e, s, r in zip(embed_times, search_times, rerank_times, strict=True)
+    ]
 
     def row(label: str, times: list[float]) -> tuple[str, str, str, str]:
         return (
@@ -79,10 +82,7 @@ def benchmark(query: str, repeats: int = 5, top_k: int = 8) -> None:
     table.add_row(*row("TOTAL", total_times))
 
     console.print(table)
-    console.print(
-        f"\nChunks candidatos após search: {len(retrieved)} "
-        f"→ reranked top-{top_k}"
-    )
+    console.print(f"\nChunks candidatos após search: {len(retrieved)} → reranked top-{top_k}")
 
 
 def main() -> None:
