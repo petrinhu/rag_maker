@@ -39,6 +39,27 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           uv sync --extra dev
 
+      - name: Gitleaks (secret scan — história completa)
+        run: |
+          # F12.27 / AUD-SEC-4: varredura de segredos em TODA a história git
+          # (não só o diff), gate hard-fail. Binário baixado pinado por
+          # versão + verificado por SHA256 (supply chain — não confiar em
+          # `curl | sh` nem em runner com gitleaks pré-instalado).
+          set -euo pipefail
+          GITLEAKS_VERSION="8.30.1"
+          GITLEAKS_SHA256="551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+          TMP_DIR="$(mktemp -d)"
+          curl -sL -o "$TMP_DIR/gitleaks.tar.gz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  ${TMP_DIR}/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf "$TMP_DIR/gitleaks.tar.gz" -C "$TMP_DIR" gitleaks
+          "$TMP_DIR/gitleaks" version
+          # `git .`: varre toda a história (não só staged/working tree).
+          # Sem --config: usa a allowlist do repo em .gitleaks.toml se
+          # existir; hoje não existe (nenhum falso-positivo histórico
+          # encontrado na auditoria F12.27 / AUD-SEC-4).
+          "$TMP_DIR/gitleaks" git . --redact -v
+
       - name: pip-audit (SCA — dependências vulneráveis)
         run: |
           export PATH="$HOME/.local/bin:$PATH"

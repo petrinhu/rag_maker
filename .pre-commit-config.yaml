@@ -24,6 +24,14 @@ repos:
         # (F12.17 / AUD-SEC-3).
         args: [-r, src/, -c, bandit.yaml]
 
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      # F12.27 / AUD-SEC-4: secret scan local, modo protect (staged) — só
+      # olha o que está prestes a ser commitado, roda rápido no dia-a-dia.
+      # A varredura de história completa acontece no CI (ci.yml).
+      - id: gitleaks
+
   - repo: local
     hooks:
       - id: import-linter
