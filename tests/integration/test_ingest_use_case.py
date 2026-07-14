@@ -125,6 +125,96 @@ def test_scan_detects_modified_file(use_case: IngestUseCase, tmp_path: Path) -> 
     assert f in report.modified
 
 
+@pytest.mark.integration()
+def test_scan_ignores_dir_does_not_match_sibling_by_prefix(
+    store: LanceVectorStore, db_path: Path, tmp_path: Path
+) -> None:
+    """F12.19/AUD-SEC-6 (regressão): filtro de `ignored` usava `str.startswith`,
+    que casa por PREFIXO de string — 'corpus/secret' "casa" com
+    'corpus/secret2/notas.txt' porque a string 'corpus/secret2/notas.txt'
+    começa com 'corpus/secret'. Isso excluía silenciosamente um diretório
+    IRMÃO não relacionado ao que o usuário pediu para ignorar.
+
+    Repro do dossiê: ignorar `corpus/secret` NÃO deve afetar `corpus/secret2/`.
+    """
+    corpus = tmp_path / "corpus"
+    secret_dir = corpus / "secret"
+    secret2_dir = corpus / "secret2"
+    secret_dir.mkdir(parents=True)
+    secret2_dir.mkdir(parents=True)
+    (secret_dir / "confidencial.txt").write_text("segredo real")
+    sibling_file = secret2_dir / "notas.txt"
+    sibling_file.write_text("notas públicas, diretório irmão")
+
+    cfg = AppConfig.model_validate(
+        {
+            "paths": {"db_dir": str(db_path)},
+            "ignored": {"paths": [str(secret_dir)]},
+        }
+    )
+    uc = IngestUseCase(embedder=_FakeEmbedder(), store=store, loader_for=loader_for, config=cfg)
+
+    report = uc.scan_changes(corpus)
+    new_paths = {str(p) for p in report.new}
+
+    assert str(sibling_file) not in report.removed  # nem sequer deveria existir no manifest
+    assert str(sibling_file) in new_paths, "diretório irmão 'secret2' não deve ser ignorado"
+    assert str(secret_dir / "confidencial.txt") not in new_paths, (
+        "conteúdo de 'secret' deve continuar ignorado"
+    )
+
+
+@pytest.mark.integration()
+def test_scan_ignores_files_inside_ignored_dir_including_deep_subdirs(
+    store: LanceVectorStore, db_path: Path, tmp_path: Path
+) -> None:
+    """Caso legítimo: arquivos DENTRO do diretório ignorado continuam
+    ignorados, inclusive em subdiretórios profundos (não é regressão do fix
+    de F12.19 — is_relative_to() deve manter esse comportamento)."""
+    corpus = tmp_path / "corpus"
+    secret_dir = corpus / "secret"
+    deep_dir = secret_dir / "sub" / "deep"
+    deep_dir.mkdir(parents=True)
+    (secret_dir / "top.txt").write_text("segredo raiz")
+    (deep_dir / "buried.txt").write_text("segredo enterrado")
+    (corpus / "public.txt").write_text("público")
+
+    cfg = AppConfig.model_validate(
+        {
+            "paths": {"db_dir": str(db_path)},
+            "ignored": {"paths": [str(secret_dir)]},
+        }
+    )
+    uc = IngestUseCase(embedder=_FakeEmbedder(), store=store, loader_for=loader_for, config=cfg)
+
+    report = uc.scan_changes(corpus)
+    new_paths = {str(p) for p in report.new}
+
+    assert str(corpus / "public.txt") in new_paths
+    assert str(secret_dir / "top.txt") not in new_paths
+    assert str(deep_dir / "buried.txt") not in new_paths
+
+
+@pytest.mark.integration()
+def test_scan_ignores_db_dir_inside_corpus(store: LanceVectorStore, tmp_path: Path) -> None:
+    """db_dir localizado dentro do corpus continua ignorado (evita o índice
+    LanceDB tentar auto-indexar seus próprios arquivos de dados)."""
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    db_dir = corpus / ".rag_maker_db"
+    db_dir.mkdir()
+    (corpus / "doc.txt").write_text("documento normal")
+
+    cfg = AppConfig.model_validate({"paths": {"db_dir": str(db_dir)}})
+    uc = IngestUseCase(embedder=_FakeEmbedder(), store=store, loader_for=loader_for, config=cfg)
+
+    report = uc.scan_changes(corpus)
+    new_paths = {str(p) for p in report.new}
+
+    assert str(corpus / "doc.txt") in new_paths
+    assert not any(str(db_dir) in p for p in new_paths)
+
+
 # ── ingest_incremental ────────────────────────────────────────────────────────
 
 

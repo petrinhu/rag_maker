@@ -147,8 +147,14 @@ class IngestUseCase:
     def scan_changes(self, corpus_dir: Path, recursive: bool = True) -> ChangeReport:
         manifest = self._load_manifest()
         manifest = self._repair_manifest_from_store(manifest)
-        db_dir_str = str(self._db_dir)
-        ignored = {str(p) for p in self._config.ignored.paths} | {db_dir_str}
+        # F12.19/AUD-SEC-6: `ignored` precisa ser um conjunto de `Path` RESOLVIDOS
+        # (não `str`) e a checagem precisa ser `Path.is_relative_to`, não
+        # `str.startswith`. Comparação por prefixo de string casa diretórios
+        # IRMÃOS por acidente: a string "corpus/secret2/notas.txt" começa com
+        # "corpus/secret", então ignorar "corpus/secret" excluía silenciosamente
+        # "corpus/secret2/" inteiro. `resolve()` normaliza `..`/symlinks/relativos
+        # para que a comparação de componentes de caminho seja exata.
+        ignored = {p.resolve() for p in self._config.ignored.paths} | {self._db_dir.resolve()}
         report = ChangeReport()
         seen: set[str] = set()
 
@@ -156,7 +162,8 @@ class IngestUseCase:
         for path in sorted(glob_fn("*")):
             if not path.is_file():
                 continue
-            if any(str(path).startswith(ig) for ig in ignored):
+            resolved_path = path.resolve()
+            if any(resolved_path.is_relative_to(ig) for ig in ignored):
                 continue
             if not self._is_loadable(path):
                 continue
