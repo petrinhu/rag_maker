@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 import httpx
 import pytest
 import respx
@@ -71,3 +73,41 @@ class TestOllamaEmbedder:
         emb = OllamaEmbedder("bge-m3:latest", _URL)
         with pytest.raises(EmbeddingError, match="Dimensão desconhecida"):
             _ = emb.dim
+
+
+@pytest.mark.integration
+class TestEmbedWithRetry:
+    """F12.21/AUD-TEST-5: caminho de retry-com-backoff de _embed_with_retry.
+
+    time.sleep é mockado em ambos os testes para não gastar os ~3s reais de
+    backoff exponencial (2**attempt).
+    """
+
+    @respx.mock
+    def test_recovers_after_transient_connect_errors(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(time, "sleep", lambda *_: None)
+        route = respx.post(_EMBED)
+        route.side_effect = [
+            httpx.ConnectError("refused"),
+            httpx.ConnectError("refused"),
+            httpx.Response(200, json={"embeddings": [_vec()]}),
+        ]
+        emb = OllamaEmbedder("bge-m3:latest", _URL, max_retries=3)
+
+        result = emb.embed("hello")
+
+        assert isinstance(result, tuple)
+        assert len(result) == _DIM
+        assert route.call_count == 3
+
+    @respx.mock
+    def test_exhausts_retries_and_raises_last_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(time, "sleep", lambda *_: None)
+        route = respx.post(_EMBED)
+        route.side_effect = httpx.ConnectError("refused")
+        emb = OllamaEmbedder("bge-m3:latest", _URL, max_retries=3)
+
+        with pytest.raises(EmbeddingError, match="refused"):
+            emb.embed("hello")
+
+        assert route.call_count == 3
