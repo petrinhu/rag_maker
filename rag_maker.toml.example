@@ -4,31 +4,31 @@
 
 [paths]
 corpus_dir = "/caminho/para/seus/livros"
-db_dir     = "~/.local/share/rag_maker/db"
+db_dir = "~/.local/share/rag_maker/db"
 
 [ollama]
-url             = "http://127.0.0.1:11434"
+url = "http://127.0.0.1:11434"
 embedding_model = "bge-m3:latest"
 timeout_seconds = 180
-auto_start      = true
-auto_pull       = false   # true = baixa o modelo sem perguntar
+auto_start = true
+auto_pull = false  # true = baixa o modelo sem perguntar
 
 [chunking]
-size    = 1000
+size = 1000
 overlap = 200
 
 [retrieval]
 coarse_top_n = 100
 rerank_top_k = 8
-alpha        = 0.5        # peso dense vs lexical no RRF (0.0=só BM25, 1.0=só HNSW)
+alpha = 0.5  # (reservado para uso futuro; ainda não implementado, sem efeito)
 
 [reranker]
-model  = "BAAI/bge-reranker-v2-m3"
-device = "auto"           # cpu | cuda | auto
+model = "BAAI/bge-reranker-v2-m3"
+device = "auto"  # cpu | cuda | auto
 
 [logging]
-level  = "INFO"
-format = "console"        # console | json
+level = "INFO"
+format = "console"  # console | json
 
 [ignored]
-paths = []                # lista de caminhos absolutos a ignorar na ingestão
+paths = []  # lista de caminhos absolutos a ignorar na ingestão

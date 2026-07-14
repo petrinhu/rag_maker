@@ -220,7 +220,7 @@ overlap = 200
 [retrieval]
 coarse_top_n = 100
 rerank_top_k = 8
-alpha = 0.5
+alpha = 0.5              # reservado para uso futuro; ainda nao implementado, sem efeito
 
 [reranker]
 model = "BAAI/bge-reranker-v2-m3"
@@ -430,6 +430,8 @@ Standard instruction to paste into the agent prompt:
 ## Configuration
 
 TOML at `~/.config/rag_maker/config.toml` (XDG). Override via env: `RAG_MAKER_*` with `__` as nested separator. See pt-br section above for full TOML example.
+
+> Note: `[retrieval].alpha` is reserved for future use; not implemented yet, has no effect.
 
 ```bash
 RAG_MAKER_OLLAMA__EMBEDDING_MODEL=other-model:latest rag query "..."

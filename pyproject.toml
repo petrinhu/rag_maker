@@ -6,6 +6,10 @@ build-backend = "hatchling.build"
 name = "rag-maker"
 version = "0.1.4"
 requires-python = ">=3.11"
+license = "AGPL-3.0-or-later"
+classifiers = [
+  "License :: OSI Approved :: GNU Affero General Public License v3",
+]
 dependencies = [
   "typer[all]>=0.12",
   "rich>=13",
@@ -14,7 +18,7 @@ dependencies = [
   "structlog>=24",
   "lancedb>=0.10",
   "langchain-text-splitters>=0.2",
-  "pypdf[crypto]>=4",
+  "pypdf[crypto]>=6.13.3",
   "python-docx>=1",
   "ebooklib>=0.18",
   "beautifulsoup4>=4.12",
