@@ -333,6 +333,52 @@ class TestPdfCorruptedRaisesCleanly:
 
 
 @pytest.mark.integration
+class TestPdfFailFastMidLoop:
+    """F12.30: prova que `running_chars` aborta DURANTE o laço de páginas
+    (fail-fast por página) e não apenas na checagem pós-join
+    (`check_extracted_size`). Sem este teste, um regressor poderia mover a
+    checagem de volta para depois do `"\\n".join(pages_text)` — todos os
+    outros testes de PDF continuariam verdes (a exceção ainda seria
+    levantada, só que tarde demais, depois de extrair TODAS as páginas)."""
+
+    def test_running_chars_aborts_before_extracting_all_pages(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        call_count = [0]
+        page_text = "x" * 100  # cada página soma 100 chars ao acumulador
+        n_pages = 10
+        expected_calls_before_abort = 3  # 100+100+100=300 > max_extracted_chars
+
+        class _FakePage:
+            def extract_text(self) -> str:
+                call_count[0] += 1
+                return page_text
+
+        class _FakeReader:
+            def __init__(self, *_args: object, **_kwargs: object) -> None:
+                self.pages = [_FakePage() for _ in range(n_pages)]
+
+        monkeypatch.setattr("rag_maker.adapters.driven.loaders.pdf.PdfReader", _FakeReader)
+
+        dummy = tmp_path / "fake_multi_page.pdf"
+        dummy.write_bytes(b"%PDF-1.4\n%fake bytes, reader is mocked\n")
+
+        # limite estoura na 3ª página (100 -> 200 -> 300 > 250), bem antes
+        # das 10 páginas do PDF sintético.
+        max_chars = 250
+        with pytest.raises(LoadError, match="acima do limite"):
+            PdfLoader(max_extracted_chars=max_chars).load(dummy)
+
+        # (a) exceção correta do domínio já verificada por pytest.raises
+        # acima. (b) prova de fail-fast: extract_text foi chamado
+        # EXATAMENTE até a página que estourou o teto, nunca as 10 páginas
+        # inteiras — se o loader extraísse tudo antes de checar (checagem
+        # só pós-join), call_count seria 10.
+        assert call_count[0] == expected_calls_before_abort
+        assert call_count[0] < n_pages
+
+
+@pytest.mark.integration
 class TestTextBinaryGuard:
     """AUD-INPUT-3: binário disfarçado de .txt/.md deve ser recusado, não
     silenciosamente decodificado via fallback latin-1/cp1252 cego."""
