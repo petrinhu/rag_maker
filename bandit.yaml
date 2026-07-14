@@ -4,5 +4,3 @@ exclude_dirs:
   - legacy
   - .venv
   - tests
-severity: medium
-confidence: medium

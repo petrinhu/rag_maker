@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import shutil
-import subprocess
+import subprocess  # nosec B404 # usado só em Popen abaixo com lista fixa de argumentos, sem shell nem input do usuário
 import time
 
 import httpx
@@ -36,7 +36,7 @@ def spawn_daemon() -> None:
     """Inicia 'ollama serve' em background (não bloqueia)."""
     if not shutil.which("ollama"):
         raise OllamaUnavailableError("comando 'ollama' não encontrado no PATH")
-    subprocess.Popen(
+    subprocess.Popen(  # nosec B603 B607 # comando fixo ["ollama","serve"] resolvido via PATH (shutil.which já validou acima); sem shell=True e sem input do usuário
         ["ollama", "serve"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,

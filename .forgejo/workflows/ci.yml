@@ -130,7 +130,10 @@ jobs:
       - name: Bandit
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          uv run bandit -r src/ -c bandit.yaml --severity-level medium
+          # Sem --severity-level: qualquer Low NOVO (sem # nosec BXXX pontual e
+          # justificado) quebra o gate (F12.17 / AUD-SEC-3). Achados Low reais
+          # existentes têm # nosec BXXX -- justificativa inline no código.
+          uv run bandit -r src/ -c bandit.yaml
 
       - name: Unit + integration tests (coverage gate)
         env:

@@ -20,7 +20,9 @@ repos:
     rev: 1.7.9
     hooks:
       - id: bandit
-        args: [-r, src/, -ll]
+        # Sem -ll: qualquer Low NOVO sem # nosec BXXX pontual quebra o hook
+        # (F12.17 / AUD-SEC-3).
+        args: [-r, src/, -c, bandit.yaml]
 
   - repo: local
     hooks:

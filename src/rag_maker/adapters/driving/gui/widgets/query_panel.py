@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-import subprocess
+import subprocess  # nosec B404 # usado só em Popen abaixo com listas fixas de argumentos (xdg-open/open) sobre paths do próprio corpus indexado, sem shell nem input externo
 import sys
 
 from PySide6.QtCore import Qt
@@ -142,8 +142,8 @@ class QueryPanel(QWidget):
             path = self._results[row].chunk.document_path
             if path.exists():
                 if sys.platform == "linux":
-                    subprocess.Popen(["xdg-open", str(path)])
+                    subprocess.Popen(["xdg-open", str(path)])  # nosec B603 B607 # comando fixo resolvido via PATH; arg é path do corpus já indexado, não input arbitrário do usuário
                 elif sys.platform == "darwin":
-                    subprocess.Popen(["open", str(path)])
+                    subprocess.Popen(["open", str(path)])  # nosec B603 B607 # comando fixo resolvido via PATH; arg é path do corpus já indexado, não input arbitrário do usuário
                 else:
-                    os.startfile(str(path))  # type: ignore[attr-defined]
+                    os.startfile(str(path))  # type: ignore[attr-defined]  # nosec B606 # path do corpus já indexado (não input externo); API nativa do Windows sem shell
