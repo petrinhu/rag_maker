@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -123,6 +124,39 @@ class TestLanceVectorStore:
         results = store.hybrid_search(query_vec, "xylophone", top_n=5)
         assert results[0].chunk.chunk_id == "c_target"
         assert results[0].lexical_score > 0.0
+
+    def test_upsert_populates_content_hash(self, tmp_path: Path) -> None:
+        """F12.26 / AUD-CORRECT-2: content_hash nunca deve ficar vazio — a
+        coluna é populada (aditivo) para habilitar dedup futura por
+        conteúdo (F13.6). Remover a coluna quebraria índices .lance de
+        usuários já distribuídos, então o contrato é "sempre preenchida",
+        nunca "sempre vazia" como no bug original."""
+        store = LanceVectorStore(tmp_path, embedding_dim=_DIM)
+        content = "hermetismo e alquimia"
+        store.upsert([_make_indexed("c1", content=content)])
+
+        rows = store._table.search().select(["chunk_id", "content_hash"]).limit(10).to_list()
+        row = next(r for r in rows if r["chunk_id"] == "c1")
+        expected = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        assert row["content_hash"] == expected
+
+    def test_upsert_content_hash_differs_for_different_content(self, tmp_path: Path) -> None:
+        """Dois chunks com conteúdos diferentes devem ter content_hash
+        diferentes — prova que o hash reflete o conteúdo real, não um valor
+        fixo ou derivado só do chunk_id."""
+        store = LanceVectorStore(tmp_path, embedding_dim=_DIM)
+        store.upsert(
+            [
+                _make_indexed("c1", content="hermetismo e alquimia"),
+                _make_indexed("c2", content="receita de bolo"),
+            ]
+        )
+
+        rows = store._table.search().select(["chunk_id", "content_hash"]).limit(10).to_list()
+        hashes = {r["chunk_id"]: r["content_hash"] for r in rows}
+        assert hashes["c1"] != hashes["c2"]
+        assert hashes["c1"] != ""
+        assert hashes["c2"] != ""
 
     def test_hybrid_search_logs_warning_when_fts_index_absent(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture

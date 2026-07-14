@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 from pathlib import Path
 from typing import Any
@@ -235,7 +236,10 @@ def _to_row(ic: IndexedChunk) -> dict[str, Any]:
         "char_offset": ic.chunk.char_offset,
         "page": ic.chunk.page,
         "section": ic.chunk.section,
-        "content_hash": "",
+        # F12.26 / AUD-CORRECT-2: populado (nunca removido — remover a coluna
+        # exigiria migração de schema que quebraria índices .lance já
+        # distribuídos). Habilita dedup futura por conteúdo (F13.6).
+        "content_hash": hashlib.sha256(ic.chunk.content.encode("utf-8")).hexdigest(),
         "mtime": ic.chunk.mtime,
     }
 
