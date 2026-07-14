@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from rag_maker.adapters.driven.config.toml_loader import load_toml, save_toml
 from rag_maker.adapters.driven.cross_encoder.reranker import CrossEncoderReranker
-from rag_maker.adapters.driven.lancedb.vector_store import LanceVectorStore
+from rag_maker.adapters.driven.lancedb.vector_store import LanceVectorStore, table_path
 from rag_maker.adapters.driven.loaders import loader_for as _loader_for
 from rag_maker.adapters.driven.ollama.embedder import OllamaEmbedder
 from rag_maker.adapters.driven.ollama.manager import ensure_model, ensure_running, probe
@@ -17,6 +18,8 @@ from rag_maker.application.query_use_case import QueryUseCase
 from rag_maker.domain.ports.embedder import EmbedderPort
 from rag_maker.domain.ports.reranker import RerankerPort
 from rag_maker.domain.ports.vector_store import VectorStorePort
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -107,6 +110,10 @@ class StoreStats:
     initialized: bool
     chunk_count: int | None
     embedding_dim: int | None
+    # F12.8 / AUD-CIDOCS-2: True quando a tabela existe em disco mas
+    # abrir/ler falhou (dados ilegíveis) — distinto de `initialized=False`
+    # "puro" (nunca ingerido). Ver `get_store_stats`.
+    corrupted: bool = False
 
 
 # ── Meta (dim cache em disco) ─────────────────────────────────────────────────
@@ -150,15 +157,41 @@ def ensure_ollama_ready(config: AppConfig) -> None:
 
 
 def get_store_stats(config: AppConfig) -> StoreStats:
-    """Lê estatísticas do banco sem precisar do Ollama."""
-    meta = _load_meta(config.paths.resolved_db_dir())
+    """Lê estatísticas do banco sem precisar do Ollama.
+
+    F12.8 / AUD-CIDOCS-2: distingue "banco nunca inicializado" (sem
+    `meta.json` com dim conhecida, ou tabela LanceDB nunca criada em disco
+    -> `initialized=False`, `corrupted=False`, CLI emite EXIT_CORPUS=6) de
+    "banco existe mas está ilegível/corrompido" (a tabela existe em disco,
+    mas abrir ou ler falha -> `corrupted=True`, CLI emite EXIT_DB=5). Sem
+    essa distinção, um agente reage à corrupção com o remédio errado
+    (`rag ingest` incremental, que não reconstrói) em vez de
+    `rag ingest --full`.
+    """
+    db_dir = config.paths.resolved_db_dir()
+    meta = _load_meta(db_dir)
     dim: int | None = config.embedding_dim or meta.get("embedding_dim")
     if dim is None:
         return StoreStats(initialized=False, chunk_count=None, embedding_dim=None)
+
+    table_existed_before_open = table_path(db_dir).exists()
     try:
-        store = LanceVectorStore(db_path=config.paths.resolved_db_dir(), embedding_dim=dim)
-        return StoreStats(initialized=True, chunk_count=store.count(), embedding_dim=dim)
+        store = LanceVectorStore(db_path=db_dir, embedding_dim=dim)
+        count = store.count()
+        store.check_integrity()
+        return StoreStats(initialized=True, chunk_count=count, embedding_dim=dim)
     except Exception:
+        if table_existed_before_open:
+            logger.warning(
+                "store_corrupted db_dir=%s: tabela LanceDB existe em disco mas "
+                "abrir/ler falhou — sinalizando corrupção (EXIT_DB=5).",
+                db_dir,
+                exc_info=True,
+            )
+            return StoreStats(
+                initialized=False, chunk_count=None, embedding_dim=dim, corrupted=True
+            )
+        # Tabela nunca foi criada: nada para ler, não é corrupção.
         return StoreStats(initialized=False, chunk_count=None, embedding_dim=dim)
 
 

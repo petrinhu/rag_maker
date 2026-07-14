@@ -42,6 +42,14 @@ EXIT_DB = 5
 EXIT_CORPUS = 6
 EXIT_INTERNAL = 70
 
+# F12.8 / AUD-CIDOCS-2: mensagem bilíngue — o consumidor (IA externa) segue
+# AGENTS.md/README, que documentam exit 5 = "banco corrompido, requer
+# intervenção humana, não retentar" e sugerem `rag ingest --full`.
+_DB_CORRUPTED_MSG = (
+    "Banco corrompido. Execute `rag ingest --full` para reconstruir. / "
+    "Corrupted vector store. Run `rag ingest --full` to rebuild."
+)
+
 # ── Apps ──────────────────────────────────────────────────────────────────────
 
 app = typer.Typer(
@@ -125,25 +133,33 @@ def status(
             "initialized": stats.initialized,
             "chunk_count": stats.chunk_count,
             "embedding_dim": stats.embedding_dim,
+            "corrupted": stats.corrupted,
         },
     }
 
     if as_json:
         _print_json(data)
-        return
+    else:
+        t = Table(show_header=False, box=None)
+        t.add_row("Versão", _pkg_version("rag-maker"))
+        t.add_row("Config", str(get_config_path()))
+        t.add_row("Corpus dir", str(config.paths.corpus_dir or "[dim]não configurado[/dim]"))
+        t.add_row("DB dir", str(config.paths.resolved_db_dir()))
+        t.add_row("Ollama", "[green]online[/green]" if running else "[red]offline[/red]")
+        t.add_row("Modelo", config.ollama.embedding_model)
+        t.add_row(
+            "Chunks",
+            str(stats.chunk_count) if stats.chunk_count is not None else "[dim]—[/dim]",
+        )
+        if stats.corrupted:
+            t.add_row("Banco", "[red]corrompido[/red]")
+        console.print(t)
 
-    t = Table(show_header=False, box=None)
-    t.add_row("Versão", _pkg_version("rag-maker"))
-    t.add_row("Config", str(get_config_path()))
-    t.add_row("Corpus dir", str(config.paths.corpus_dir or "[dim]não configurado[/dim]"))
-    t.add_row("DB dir", str(config.paths.resolved_db_dir()))
-    t.add_row("Ollama", "[green]online[/green]" if running else "[red]offline[/red]")
-    t.add_row("Modelo", config.ollama.embedding_model)
-    t.add_row(
-        "Chunks",
-        str(stats.chunk_count) if stats.chunk_count is not None else "[dim]—[/dim]",
-    )
-    console.print(t)
+    # F12.8 / AUD-CIDOCS-2: `status` também deve emitir EXIT_DB=5 quando o
+    # banco existe em disco mas está ilegível — sinal diferenciado de "nunca
+    # inicializado" (que não é erro em `status`, só ausência de dado).
+    if stats.corrupted:
+        _abort(_DB_CORRUPTED_MSG, EXIT_DB)
 
 
 # ── ingest ────────────────────────────────────────────────────────────────────
@@ -226,13 +242,17 @@ def ingest(
 @app.command()
 def query(
     text: Annotated[str, typer.Argument(help="Consulta em linguagem natural.")],
-    top_k: Annotated[int | None, typer.Option("--top-k", help="Número de chunks.")] = None,
+    top_k: Annotated[
+        int | None, typer.Option("--top-k", min=1, help="Número de chunks (>= 1).")
+    ] = None,
     alpha: Annotated[float | None, typer.Option("--alpha", help="Peso dense vs lexical.")] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Saída em JSON.")] = False,
 ) -> None:
     """Consultar o índice e retornar trechos ranqueados."""
     config = _load_config()
     stats = get_store_stats(config)
+    if stats.corrupted:
+        _abort(_DB_CORRUPTED_MSG, EXIT_DB)
     if not stats.initialized or not stats.chunk_count:
         _abort("Banco vazio ou não inicializado. Execute `rag ingest` primeiro.", EXIT_CORPUS)
 

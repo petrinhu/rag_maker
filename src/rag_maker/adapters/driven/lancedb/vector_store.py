@@ -181,6 +181,22 @@ class LanceVectorStore:
                     exc_info=True,
                 )
 
+    def check_integrity(self) -> None:
+        """Lê uma linha do dataset para detectar corrupção silenciosa.
+
+        F12.8 / AUD-CIDOCS-2: ``count_rows()`` sozinho não é confiável — o
+        LanceDB reporta a contagem a partir do manifest sem necessariamente
+        ler os arquivos de dados, então um data file corrompido pode
+        conviver com uma contagem "normal" (confirmado por repro manual:
+        corromper o `.lance` de dados mantém `count_rows()`==N, mas
+        `search().to_list()` levanta `RuntimeError` do lance-rust).
+        Tabela vazia é considerada íntegra (nada para ler). Propaga a
+        exceção original — quem chama decide o exit code.
+        """
+        if self.count() == 0:
+            return
+        self._table.search().select(["chunk_id"]).limit(1).to_list()
+
     def ensure_vector_index(self) -> None:
         try:
             self._table.create_index(metric="cosine", replace=True)
@@ -196,6 +212,18 @@ class LanceVectorStore:
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+
+def table_path(db_path: Path, table_name: str = _DEFAULT_TABLE) -> Path:
+    """Caminho em disco da tabela LanceDB (``{db_path}/{table_name}.lance``).
+
+    F12.8 / AUD-CIDOCS-2: usado por ``composition/container.py`` para
+    distinguir "banco nunca inicializado" (tabela nunca criada em disco) de
+    "banco existe mas está corrompido" (tabela existe, abrir/ler falha) —
+    a única forma barata de saber, sem tentar abrir, se um diretório de
+    banco vazio é "esperado" (nunca ingerido) ou resultado de dano.
+    """
+    return db_path / f"{table_name}.lance"
 
 
 def _to_row(ic: IndexedChunk) -> dict[str, Any]:
