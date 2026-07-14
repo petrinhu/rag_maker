@@ -107,11 +107,17 @@ Campos de `chunks[]`:
 
 ---
 
-### `rag ingest [--corpus DIR] [--json]`
+### `rag ingest [--corpus DIR] [--full] [--yes/-y] [--json]`
 
 ```bash
 rag ingest --json
 ```
+
+Parâmetros:
+- `--corpus DIR` (opcional): pasta do corpus a ingerir (default: `corpus_dir` do `config.toml`).
+- `--full`: reconstrução total do índice (re-ingesta tudo, ignora o modo incremental).
+- `--yes` / `-y`: pula a confirmação interativa. **Obrigatória para agentes/execução sem TTY** — sem ela, `--full` trava o comando aguardando input no terminal.
+- `--json`: **sempre use** para saída estruturada.
 
 **NUNCA chame sem autorização explícita do usuário.** A ingestão consome tempo e recursos (embedding de todos os documentos novos/modificados).
 
