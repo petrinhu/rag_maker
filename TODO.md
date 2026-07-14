@@ -35,9 +35,9 @@ Referências:
 | F9 | Exibição, atalho de abertura e auto-rescan do RAG | Front | 2 | Média |
 | F10 | Bugfixes pós-release + otimização de memória CUDA + CLI de device | Back/Front | 6 | Alta |
 | F11 | Rewrite C++/Qt6 em novo repo `rag_maker_cpp` (fork de stack) | All | 10 | Alta |
-| F12 | Remediação da auditoria (28 achados AUD-* + 6 follow-ups) | All | 34 | Alta |
+| F12 | Remediação da auditoria (28 achados AUD-* + 7 follow-ups) | All | 35 | Alta |
 | F13 | Melhorias de retrieval (Tier A+B + tuning UX: presets/manual/calibrador/slider) | Mid/Back/Front | 19 | Média |
-| **Total** | | | **164** | |
+| **Total** | | | **165** | |
 
 ---
 
@@ -192,6 +192,7 @@ Referências:
 | F12.32 | Segurança/SCA | **Follow-up da onda IMPORTANTE** — `pip-audit` reporta 20 CVEs remanescentes em 12 pacotes (torch, cryptography, langchain-core, langsmith, pydantic-settings, urllib3, setuptools, pip, click, idna, soupsieve, msgpack), nenhuma CRITICAL e nenhuma é pypdf (já corrigido em F12.23). Avaliar bump onde há fix disponível; várias são transitivas sem correção upstream ou aceitáveis para app offline. Documentar ignores datados no bloco do pip-audit se forem falsos-positivos. | Baixa | F12.1 | Média | 🔍 Pendente verificação | — |
 | F12.33 | Qualidade | **Follow-up da onda IMPORTANTE** — `scripts/benchmark_retrieval.py` tem 2 findings de ruff pré-existentes (F401 `Path` não usado; B905 `zip()` sem `strict=`), fora do escopo das unidades da onda. Corrigir para o `ruff check .` do projeto ficar 100% limpo. | Baixa | — | Baixa | 🔍 Pendente verificação | — |
 | F12.34 | Qualidade/Tests | **Follow-up da onda COSMÉTICA** — teste unitário leve de `scripts/spdx_headers.py` (em tests/unit, sem I/O real de src/) cobrindo os 4 casos de posicionamento do header (from __future__ na linha 1; com docstring de módulo; com shebang+docstring; arquivo vazio) + idempotência (--fix 2x não duplica) + modo --check (exit 1 quando falta). O corpus real de src/ não exercita shebang/docstring, então essa lógica hoje só foi validada por repro sintético do reviewer. | Baixa | F12.24 | Baixa | 🔍 Pendente verificação | — |
+| F12.35 | Tests/Hexagonal | **Follow-up (onda follow-ups)** — `tests/integration/test_gui_corpus_switch.py::_FakeStore` não implementa os 2 métodos novos do `VectorStorePort` (`ensure_fts_index`/`ensure_vector_index`, promovidos em F12.29). Inofensivo hoje (esse teste não dispara ingestão real — `ScanWorker` é stub no-op), mas é mina-terrestre: se um teste futuro nesse arquivo exercitar `ingest_incremental`/`recreate_all`, quebra com AttributeError. Adicionar os 2 no-op ao fake. | Baixa | F12.29 | Baixa | ⏳ Pendente | — |
 | F13.1 | Retrieval | **Contextual headers no chunk** (Tier A) — prefixar cada chunk com `título do doc > seção > página` (metadados que já existem) antes de embeddar; versão sem-LLM do "Contextual Retrieval" (Anthropic). Recupera referências/pronomes perdidos no split e melhora recall. | Média | — | Baixa | ⏳ Pendente | — |
 | F13.2 | Retrieval | **Parent-document / sentence-window** (Tier A) — indexar chunk pequeno (bom p/ match) mas ENTREGAR o trecho-pai (janela maior) ao LLM consumidor: recall fino + contexto rico. Requer schema com `parent_id`/offsets e reconstrução do pai na query. | Média | — | Média | ⏳ Pendente | — |
 | F13.3 | Retrieval | **MMR / diversidade no top-k** (Tier A) — reordenação Maximal Marginal Relevance penalizando quase-duplicatas, cobrindo mais facetas da pergunta; `lambda` exposto no TOML/CLI. Puro algoritmo sobre os vetores, sem LLM. | Média | — | Baixa | ⏳ Pendente | — |
