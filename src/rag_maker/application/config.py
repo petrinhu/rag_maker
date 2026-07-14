@@ -48,6 +48,11 @@ class RetrievalConfig(BaseModel):
 class RerankerConfig(BaseModel):
     model: str = "BAAI/bge-reranker-v2-m3"
     device: str = "auto"
+    # AUD-SEC-5 / F12.18: sem revision, `CrossEncoder` resolve a branch mutável
+    # `main` do repo HF a cada load — pin explícito de commit SHA evita que uma
+    # republicação upstream (conta comprometida ou mantenedor) troque os pesos
+    # silenciosamente. `None` preserva o comportamento atual (resolve `main`).
+    revision: str | None = None
 
 
 class LoggingConfig(BaseModel):

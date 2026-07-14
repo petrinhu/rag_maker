@@ -112,3 +112,29 @@ def test_query_use_case_shares_reranker(container: Container) -> None:
 @pytest.mark.unit()
 def test_config_is_app_config(container: Container) -> None:
     assert isinstance(container.config, AppConfig)
+
+
+@pytest.mark.unit()
+def test_build_container_propagates_reranker_revision_pin(tmp_path: Path) -> None:
+    """AUD-SEC-5 / F12.18 fim-a-fim: o pin `[reranker].revision` do TOML
+
+    precisa chegar ao `CrossEncoderReranker` construído por `build_container`
+    no caminho de produção (sem override de `reranker=`) — caso contrário o
+    pin fica inerte na CLI/GUI mesmo configurado. Não instancia o modelo real
+    (lazy load só ocorre em `rerank()`/`_get_model()`).
+    """
+    cfg_file = tmp_path / "config.toml"
+    cfg_file.write_text(
+        f'[paths]\ndb_dir = "{tmp_path / "db"}"\n[reranker]\nrevision = "deadbeef"\n'
+    )
+
+    result = build_container(
+        config_path=cfg_file,
+        embedder=_FakeEmbedder(),
+        store=_FakeStore(),
+        # reranker NÃO sobrescrito: exercita a construção real de
+        # CrossEncoderReranker dentro de build_container.
+    )
+
+    assert result.config.reranker.revision == "deadbeef"
+    assert result.reranker._revision == "deadbeef"  # type: ignore[attr-defined]

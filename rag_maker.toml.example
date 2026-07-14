@@ -25,6 +25,7 @@ alpha = 0.5  # (reservado para uso futuro; ainda não implementado, sem efeito)
 [reranker]
 model = "BAAI/bge-reranker-v2-m3"
 device = "auto"  # cpu | cuda | auto
+# revision = ""            # (opcional) pina o commit SHA do modelo no HuggingFace (integridade; AUD-SEC-5)
 
 [logging]
 level = "INFO"

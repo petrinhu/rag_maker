@@ -327,6 +327,7 @@ def build_container(
     _reranker: RerankerPort = reranker or CrossEncoderReranker(
         model_name=config.reranker.model,
         device=config.reranker.device,
+        revision=config.reranker.revision,
     )
 
     return Container(

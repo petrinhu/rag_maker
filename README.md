@@ -212,6 +212,7 @@ corpus_dir = "/home/usuario/biblioteca"
 url = "http://127.0.0.1:11434"
 embedding_model = "bge-m3:latest"
 timeout_seconds = 180
+auto_pull = false        # true = baixa o modelo automaticamente se faltar
 
 [chunking]
 size = 1000
@@ -225,6 +226,7 @@ alpha = 0.5              # reservado para uso futuro; ainda nao implementado, se
 [reranker]
 model = "BAAI/bge-reranker-v2-m3"
 device = "auto"          # "auto" | "cpu" | "cuda" | "mps"
+revision = "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41"  # opcional, ver "Integridade dos modelos" abaixo
 
 [gui]
 recursive_scan = true
@@ -235,6 +237,32 @@ Override por env:
 ```bash
 RAG_MAKER_OLLAMA__EMBEDDING_MODEL=other-model:latest rag query "..."
 ```
+
+### Integridade dos modelos (pin de revisão)
+
+`rag-maker` baixa dois modelos de tags/branches mutáveis por padrão: o embedder via Ollama
+(`bge-m3:latest`) e o reranker via HuggingFace Hub (`BAAI/bge-reranker-v2-m3`, branch `main`).
+Tag/branch mutável significa que o mantenedor (ou uma conta comprometida no registro upstream)
+pode republicar pesos diferentes sob o mesmo nome, e a próxima instalação ou carregamento
+incorpora isso silenciosamente, sem erro, sem aviso.
+
+- **Reranker (HuggingFace):** fixe `[reranker].revision` com um commit SHA específico do
+  repositório do modelo (ver histórico de commits em
+  [huggingface.co/BAAI/bge-reranker-v2-m3](https://huggingface.co/BAAI/bge-reranker-v2-m3)).
+  Com `revision` definido, `CrossEncoder` resolve exatamente aquele commit, não `main`.
+  Deixe em branco (`revision` ausente, o default é `None`) só se você aceita conscientemente
+  resolver a branch mutável a cada carregamento: atualização deliberada é trocar o SHA e
+  revisar o changelog do modelo antes.
+- **Embedder (Ollama):** prefira referenciar o modelo por digest sha256 em vez da tag
+  `:latest`, por exemplo `embedding_model = "bge-m3@sha256:<digest>"` (descubra o digest com
+  `ollama show bge-m3:latest --modelfile` ou no registry). Isso fixa exatamente os pesos
+  puxados, de forma análoga ao `revision` do reranker.
+- **`auto_pull = true`:** esse flag deixa o `rag-maker` puxar (`ollama pull`) o modelo
+  automaticamente se ele não existir localmente, sem verificação de hash contra um valor
+  esperado. Isso implica **confiar no que a tag/digest resolver no momento do pull**. Se você
+  fixou `embedding_model` por digest, o risco é baixo (o digest é o próprio hash do conteúdo);
+  se ficou com a tag `:latest`, `auto_pull=true` puxa o que estiver publicado sob essa tag
+  naquele instante, sem re-verificação posterior. Default é `false` (opt-in explícito).
 
 ---
 
@@ -436,6 +464,32 @@ TOML at `~/.config/rag_maker/config.toml` (XDG). Override via env: `RAG_MAKER_*`
 ```bash
 RAG_MAKER_OLLAMA__EMBEDDING_MODEL=other-model:latest rag query "..."
 ```
+
+### Model integrity (revision pinning)
+
+`rag-maker` downloads two models from mutable tags/branches by default: the embedder via
+Ollama (`bge-m3:latest`) and the reranker via HuggingFace Hub (`BAAI/bge-reranker-v2-m3`,
+`main` branch). A mutable tag/branch means the maintainer (or a compromised account on the
+upstream registry) can republish different weights under the same name, and the next install
+or load silently picks that up: no error, no warning.
+
+- **Reranker (HuggingFace):** pin `[reranker].revision` to a specific commit SHA of the model
+  repository (see commit history at
+  [huggingface.co/BAAI/bge-reranker-v2-m3](https://huggingface.co/BAAI/bge-reranker-v2-m3)).
+  With `revision` set, `CrossEncoder` resolves exactly that commit, not `main`. Leave it blank
+  (`revision` absent, default is `None`) only if you knowingly accept resolving the mutable
+  branch on every load: a deliberate update means bumping the SHA and reviewing the model
+  changelog first.
+- **Embedder (Ollama):** prefer referencing the model by sha256 digest instead of the
+  `:latest` tag, for example `embedding_model = "bge-m3@sha256:<digest>"` (find the digest
+  with `ollama show bge-m3:latest --modelfile` or on the registry). This pins the exact
+  weights pulled, analogous to the reranker's `revision`.
+- **`auto_pull = true`:** this flag lets `rag-maker` pull (`ollama pull`) the model
+  automatically when missing locally, with no hash check against an expected value. It
+  implies **trusting whatever the tag/digest resolves to at pull time**. If you pinned
+  `embedding_model` by digest, the risk is low (the digest is the content hash itself); if
+  you kept the `:latest` tag, `auto_pull=true` pulls whatever is published under that tag at
+  that moment, with no later re-verification. Default is `false` (explicit opt-in).
 
 ---
 

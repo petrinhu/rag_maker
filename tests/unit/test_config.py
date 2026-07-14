@@ -59,6 +59,46 @@ class TestAppConfigFromFile:
 
 
 @pytest.mark.unit
+class TestRerankerConfig:
+    """AUD-SEC-5 / F12.18: pin de `revision` para o modelo de reranking.
+
+    Cobre só a resolução de config (TOML/env → `AppConfig.reranker.revision`);
+    NÃO instancia `CrossEncoder` real — ver `test_reranker.py` para os
+    call-sites que repassam `revision=` (com `CrossEncoder` mockado/patchado).
+    """
+
+    def test_revision_none_by_default(self) -> None:
+        cfg = AppConfig()
+        assert cfg.reranker.revision is None
+
+    def test_revision_from_toml(self, tmp_path: Path) -> None:
+        toml_path = tmp_path / "config.toml"
+        data = {"reranker": {"revision": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41"}}
+        toml_path.write_bytes(tomli_w.dumps(data).encode())
+        cfg = AppConfig.from_file(toml_path)
+        assert cfg.reranker.revision == "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41"
+
+    def test_revision_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("RAG_MAKER_RERANKER__REVISION", "abc123")
+        cfg = AppConfig()
+        assert cfg.reranker.revision == "abc123"
+
+    def test_revision_env_overrides_toml(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        toml_path = tmp_path / "config.toml"
+        toml_path.write_bytes(tomli_w.dumps({"reranker": {"revision": "from-toml"}}).encode())
+        monkeypatch.setenv("RAG_MAKER_RERANKER__REVISION", "from-env")
+        cfg = AppConfig.from_file(toml_path)
+        assert cfg.reranker.revision == "from-env"
+
+    def test_revision_does_not_affect_model_or_device_defaults(self) -> None:
+        cfg = AppConfig()
+        assert cfg.reranker.model == "BAAI/bge-reranker-v2-m3"
+        assert cfg.reranker.device == "auto"
+
+
+@pytest.mark.unit
 class TestAppConfigEnvOverride:
     def test_env_overrides_nested_field(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("RAG_MAKER_CHUNKING__SIZE", "42")

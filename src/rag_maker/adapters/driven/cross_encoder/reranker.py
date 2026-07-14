@@ -68,16 +68,34 @@ class CrossEncoderReranker:
         self,
         model_name: str = "BAAI/bge-reranker-v2-m3",
         device: str = "auto",
+        revision: str | None = None,
     ) -> None:
         self._model_name = model_name
         self._device = _resolve_device(device)
+        # AUD-SEC-5 / F12.18: sem `revision` fixo, `CrossEncoder` resolve a
+        # branch mutável `main` do repo HF a cada load — pin de commit SHA
+        # evita incorporar silenciosamente pesos trocados por republicação
+        # upstream (conta comprometida ou mantenedor). `None` preserva o
+        # comportamento anterior (resolve `main`).
+        self._revision = revision
         self._model: CrossEncoder | None = None
+
+    def _revision_kwargs(self) -> dict[str, str]:
+        """kwargs opcional `revision=` — omitido quando None.
+
+        `sentence_transformers.CrossEncoder` (e fakes de teste) nem sempre
+        aceitam `revision=None` explícito; omitir o kwarg quando não há pin
+        preserva 100% o comportamento anterior a AUD-SEC-5.
+        """
+        return {"revision": self._revision} if self._revision is not None else {}
 
     def _get_model(self) -> CrossEncoder:
         if self._model is not None:
             return self._model
         try:
-            self._model = CrossEncoder(self._model_name, device=self._device)
+            self._model = CrossEncoder(
+                self._model_name, device=self._device, **self._revision_kwargs()
+            )
         except (torch.cuda.OutOfMemoryError, RuntimeError) as exc:
             if self._device != "cuda" or not _is_cuda_oom(exc):
                 raise
@@ -87,7 +105,7 @@ class CrossEncoderReranker:
                 exc,
             )
             self._fallback_to_cpu()
-            self._model = CrossEncoder(self._model_name, device="cpu")
+            self._model = CrossEncoder(self._model_name, device="cpu", **self._revision_kwargs())
         return self._model
 
     def _fallback_to_cpu(self) -> None:
@@ -116,7 +134,7 @@ class CrossEncoderReranker:
                 exc,
             )
             self._fallback_to_cpu()
-            self._model = CrossEncoder(self._model_name, device="cpu")
+            self._model = CrossEncoder(self._model_name, device="cpu", **self._revision_kwargs())
             raw_scores = self._model.predict(pairs).tolist()
         ranked = sorted(zip(chunks, raw_scores, strict=True), key=lambda x: x[1], reverse=True)
         return [
