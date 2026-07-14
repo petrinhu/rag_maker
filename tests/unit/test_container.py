@@ -51,6 +51,10 @@ class _FakeStore:
     def list_sources(self) -> dict[str, int]:
         return {}
 
+    def ensure_fts_index(self) -> None: ...
+
+    def ensure_vector_index(self) -> None: ...
+
 
 class _FakeReranker:
     def rerank(self, query: str, chunks: list[RetrievedChunk], top_k: int) -> list[RankedChunk]:
