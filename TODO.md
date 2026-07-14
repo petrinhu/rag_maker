@@ -35,9 +35,9 @@ Referências:
 | F9 | Exibição, atalho de abertura e auto-rescan do RAG | Front | 2 | Média |
 | F10 | Bugfixes pós-release + otimização de memória CUDA + CLI de device | Back/Front | 6 | Alta |
 | F11 | Rewrite C++/Qt6 em novo repo `rag_maker_cpp` (fork de stack) | All | 10 | Alta |
-| F12 | Remediação da auditoria (28 achados AUD-* + 3 follow-ups da onda crítica) | All | 31 | Alta |
+| F12 | Remediação da auditoria (28 achados AUD-* + 5 follow-ups) | All | 33 | Alta |
 | F13 | Melhorias de retrieval (Tier A+B + tuning UX: presets/manual/calibrador/slider) | Mid/Back/Front | 19 | Média |
-| **Total** | | | **161** | |
+| **Total** | | | **163** | |
 
 ---
 
@@ -189,6 +189,8 @@ Referências:
 | F12.29 | Refactor/Hexagonal | **Follow-up da onda CRÍTICA** — promover `ensure_fts_index`/`ensure_vector_index` ao `VectorStorePort` (domain/ports/vector_store.py) e remover o Protocol local `_FtsIndexMaintainable` + `isinstance` ad-hoc introduzido em `IngestUseCase` na remediação de AUD-TEST-2 (débito arquitetural: application/ conhece capacidade que deveria estar no contrato formal do port). | Média | F12.5 | Baixa | ⏳ Pendente | — |
 | F12.30 | Tests | **Follow-up da onda CRÍTICA** — adicionar teste formal do fail-fast por página do `PdfLoader` (`running_chars` aborta mid-loop, não só na checagem pós-join). O reviewer da U2 provou ad-hoc (PdfReader mockado) mas não commitou o teste. | Baixa | F12.3 | Baixa | ⏳ Pendente | — |
 | F12.31 | DevEx/OOM | **Follow-up da onda CRÍTICA** — `scripts/preci.sh` roda `-m "unit or integration"`, que nesta máquina (cache HF presente) carrega o reranker bge-reranker-v2-m3 (~2.3GB) na GPU de 4GB já cheia → risco de OOM local. Deselecionar o teste do reranker no run local (`-k "not reranker"`) ou skip por recurso, mantendo o CI (onde o modelo não existe e o teste faz skip) intacto. | Baixa | F12.16 | Baixa | ⏳ Pendente | — |
+| F12.32 | Segurança/SCA | **Follow-up da onda IMPORTANTE** — `pip-audit` reporta 20 CVEs remanescentes em 12 pacotes (torch, cryptography, langchain-core, langsmith, pydantic-settings, urllib3, setuptools, pip, click, idna, soupsieve, msgpack), nenhuma CRITICAL e nenhuma é pypdf (já corrigido em F12.23). Avaliar bump onde há fix disponível; várias são transitivas sem correção upstream ou aceitáveis para app offline. Documentar ignores datados no bloco do pip-audit se forem falsos-positivos. | Baixa | F12.1 | Média | ⏳ Pendente | — |
+| F12.33 | Qualidade | **Follow-up da onda IMPORTANTE** — `scripts/benchmark_retrieval.py` tem 2 findings de ruff pré-existentes (F401 `Path` não usado; B905 `zip()` sem `strict=`), fora do escopo das unidades da onda. Corrigir para o `ruff check .` do projeto ficar 100% limpo. | Baixa | — | Baixa | ⏳ Pendente | — |
 | F13.1 | Retrieval | **Contextual headers no chunk** (Tier A) — prefixar cada chunk com `título do doc > seção > página` (metadados que já existem) antes de embeddar; versão sem-LLM do "Contextual Retrieval" (Anthropic). Recupera referências/pronomes perdidos no split e melhora recall. | Média | — | Baixa | ⏳ Pendente | — |
 | F13.2 | Retrieval | **Parent-document / sentence-window** (Tier A) — indexar chunk pequeno (bom p/ match) mas ENTREGAR o trecho-pai (janela maior) ao LLM consumidor: recall fino + contexto rico. Requer schema com `parent_id`/offsets e reconstrução do pai na query. | Média | — | Média | ⏳ Pendente | — |
 | F13.3 | Retrieval | **MMR / diversidade no top-k** (Tier A) — reordenação Maximal Marginal Relevance penalizando quase-duplicatas, cobrindo mais facetas da pergunta; `lambda` exposto no TOML/CLI. Puro algoritmo sobre os vetores, sem LLM. | Média | — | Baixa | ⏳ Pendente | — |
