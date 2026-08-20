@@ -537,6 +537,8 @@ Nenhum achado levantado foi refutado nesta rodada. Todos os 28 achados passaram 
 
 ## 8. Tabela de rastreamento de remediação
 
+> **⚠️ NÃO É A FONTE DA VERDADE (aviso 2026-08-20).** Esta tabela é o retrato CONGELADO da auditoria de 2026-07-11 e **não é atualizada**. Os 28 achados abaixo estão fundidos na tabela única do [`TODO.md`](TODO.md) como `F12.1`–`F12.28` (cada linha de lá cita o `[AUD-*]` de origem); **o status corrente de cada achado se lê no `TODO.md`**, não aqui. O projeto tem UMA tabela de pendências.
+
 | ID | Severidade | Status remediação |
 |---|---|---|
 | AUD-INPUT-2 | 🔴 CRÍTICO | ⏳ Pendente |
