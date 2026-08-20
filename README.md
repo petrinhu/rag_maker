@@ -1,7 +1,6 @@
 # rag-maker
 
-[![CI](https://codeberg.org/petrinhu/rag_maker/actions/workflows/ci.yml/badge.svg)](https://codeberg.org/petrinhu/rag_maker/actions)
-[![Release](https://img.shields.io/gitea/v/release/petrinhu/rag_maker?gitea_url=https%3A%2F%2Fcodeberg.org&display_name=tag&sort=semver&label=release)](https://codeberg.org/petrinhu/rag_maker/releases)
+[![Release](https://img.shields.io/github/v/release/petrinhu/rag_maker?display_name=tag&sort=semver&label=release)](https://github.com/petrinhu/rag_maker/releases)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![uv](https://img.shields.io/badge/managed%20by-uv-purple)](https://github.com/astral-sh/uv)
@@ -90,19 +89,19 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ### Como usuário (binários `rag` e `rag-gui` no PATH)
 
 ```bash
-uv tool install git+https://codeberg.org/petrinhu/rag_maker.git
+uv tool install git+https://github.com/petrinhu/rag_maker.git
 ```
 
 Ou via wheel publicado em releases:
 
 ```bash
-pipx install https://codeberg.org/petrinhu/rag_maker/releases/download/vX.Y.Z/rag_maker-X.Y.Z-py3-none-any.whl
+pipx install https://github.com/petrinhu/rag_maker/releases/download/vX.Y.Z/rag_maker-X.Y.Z-py3-none-any.whl
 ```
 
 ### Para desenvolvimento
 
 ```bash
-git clone https://codeberg.org/petrinhu/rag_maker.git
+git clone https://github.com/petrinhu/rag_maker.git
 cd rag_maker
 uv sync --all-extras
 uv run pytest
@@ -190,12 +189,12 @@ Agentes devem ler `AGENTS.md` antes da primeira invocação e respeitar os contr
 - Clone do repo: `./AGENTS.md` na raiz.
 - Install via `uv tool install` ou `pipx install`: o arquivo não vai dentro da wheel. Aponte o agente para a URL canônica:
   ```
-  https://codeberg.org/petrinhu/rag_maker/raw/branch/main/AGENTS.md
+  https://raw.githubusercontent.com/petrinhu/rag_maker/main/AGENTS.md
   ```
 
 Instrução padrão para colar no prompt do agente:
 
-> "Antes de invocar a CLI `rag`, leia o contrato em https://codeberg.org/petrinhu/rag_maker/raw/branch/main/AGENTS.md e siga as regras documentadas (schema JSON, exit codes, workflow recomendado)."
+> "Antes de invocar a CLI `rag`, leia o contrato em https://raw.githubusercontent.com/petrinhu/rag_maker/main/AGENTS.md e siga as regras documentadas (schema JSON, exit codes, workflow recomendado)."
 
 ---
 
@@ -290,8 +289,7 @@ AGPL-3.0, ver [LICENSE](LICENSE).
 
 # rag-maker (English)
 
-[![CI](https://codeberg.org/petrinhu/rag_maker/actions/workflows/ci.yml/badge.svg)](https://codeberg.org/petrinhu/rag_maker/actions)
-[![Release](https://img.shields.io/gitea/v/release/petrinhu/rag_maker?gitea_url=https%3A%2F%2Fcodeberg.org&display_name=tag&sort=semver&label=release)](https://codeberg.org/petrinhu/rag_maker/releases)
+[![Release](https://img.shields.io/github/v/release/petrinhu/rag_maker?display_name=tag&sort=semver&label=release)](https://github.com/petrinhu/rag_maker/releases)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 
@@ -357,19 +355,19 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ### As user
 
 ```bash
-uv tool install git+https://codeberg.org/petrinhu/rag_maker.git
+uv tool install git+https://github.com/petrinhu/rag_maker.git
 ```
 
 Or via wheel from releases:
 
 ```bash
-pipx install https://codeberg.org/petrinhu/rag_maker/releases/download/vX.Y.Z/rag_maker-X.Y.Z-py3-none-any.whl
+pipx install https://github.com/petrinhu/rag_maker/releases/download/vX.Y.Z/rag_maker-X.Y.Z-py3-none-any.whl
 ```
 
 ### For development
 
 ```bash
-git clone https://codeberg.org/petrinhu/rag_maker.git
+git clone https://github.com/petrinhu/rag_maker.git
 cd rag_maker
 uv sync --all-extras
 uv run pytest
@@ -446,12 +444,12 @@ Agents should read `AGENTS.md` before first use and respect the documented contr
 - Repo clone: `./AGENTS.md` at root.
 - Installed via `uv tool install` or `pipx install`: file is not bundled in the wheel. Point the agent at the canonical URL:
   ```
-  https://codeberg.org/petrinhu/rag_maker/raw/branch/main/AGENTS.md
+  https://raw.githubusercontent.com/petrinhu/rag_maker/main/AGENTS.md
   ```
 
 Standard instruction to paste into the agent prompt:
 
-> "Before invoking the `rag` CLI, read the contract at https://codeberg.org/petrinhu/rag_maker/raw/branch/main/AGENTS.md and follow the documented rules (JSON schema, exit codes, recommended workflow)."
+> "Before invoking the `rag` CLI, read the contract at https://raw.githubusercontent.com/petrinhu/rag_maker/main/AGENTS.md and follow the documented rules (JSON schema, exit codes, recommended workflow)."
 
 ---
 

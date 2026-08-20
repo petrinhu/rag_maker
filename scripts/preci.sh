@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Espelha o pipeline .forgejo/workflows/ci.yml localmente.
+# Espelha o pipeline .github/workflows/ci.yml (pendente de porte) localmente.
 # Rode antes de `git push` para evitar ciclo push-wait-fail.
 # Ver TESTES.md T15.1 para variante container-level.
 set -euo pipefail
@@ -22,7 +22,7 @@ echo "== bandit (medium+) =="
 uv run bandit -r src/ -c bandit.yaml --severity-level medium
 
 echo "== pip-audit (SCA) =="
-# Mantenha esta lista IDÊNTICA à do .forgejo/workflows/ci.yml (ver comentário
+# Mantenha esta lista IDÊNTICA à do .github/workflows/ci.yml (pendente de porte) (ver comentário
 # lá para a tabela pacote/CVE/data/justificativa). Ao bumpar uma dependência,
 # remova o --ignore-vuln correspondente nos DOIS arquivos no mesmo commit.
 uv run pip-audit --skip-editable \
