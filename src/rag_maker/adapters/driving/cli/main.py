@@ -44,7 +44,7 @@ EXIT_CORPUS = 6
 EXIT_INTERNAL = 70
 
 # F12.8 / AUD-CIDOCS-2: mensagem bilíngue — o consumidor (IA externa) segue
-# AGENTS.md/README, que documentam exit 5 = "banco corrompido, requer
+# LLM.md/README, que documentam exit 5 = "banco corrompido, requer
 # intervenção humana, não retentar" e sugerem `rag ingest --full`.
 _DB_CORRUPTED_MSG = (
     "Banco corrompido. Execute `rag ingest --full` para reconstruir. / "

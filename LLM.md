@@ -1,4 +1,4 @@
-# AGENTS.md — Contrato de uso para IAs externas
+# LLM.md — Contrato de uso para IAs externas
 
 > **Para agentes IA**: este documento é um contrato formal. Siga-o precisamente ao usar a CLI `rag`.
 
