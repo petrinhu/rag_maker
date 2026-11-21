@@ -169,9 +169,9 @@ Workers em `QThread`: UI nunca bloqueia durante ingestão ou query.
 
 ---
 
-## `LLM.md`: Contrato para IAs externas
+## `AGENTS.md`: Contrato para IAs externas
 
-O arquivo `LLM.md` na raiz é um **contrato formal** que orienta agentes LLM (Claude Code, ChatGPT, Gemini, etc.) sobre como invocar a CLI `rag` e interpretar resultados.
+O arquivo `AGENTS.md` na raiz é um **contrato formal** que orienta agentes LLM (Claude Code, ChatGPT, Gemini, etc.) sobre como invocar a CLI `rag` e interpretar resultados.
 
 Contém:
 
@@ -182,19 +182,19 @@ Contém:
 - Lista explícita do que **não fazer** (inferir conteúdo não retornado, inventar referências, ignorar exit codes).
 - Códigos de erro e como reagir a cada um.
 
-Agentes devem ler `LLM.md` antes da primeira invocação e respeitar os contratos lá descritos.
+Agentes devem ler `AGENTS.md` antes da primeira invocação e respeitar os contratos lá descritos.
 
-**Onde achar `LLM.md`:**
+**Onde achar `AGENTS.md`:**
 
-- Clone do repo: `./LLM.md` na raiz.
+- Clone do repo: `./AGENTS.md` na raiz.
 - Install via `uv tool install` ou `pipx install`: o arquivo não vai dentro da wheel. Aponte o agente para a URL canônica:
   ```
-  https://raw.githubusercontent.com/petrinhu/rag_maker/main/LLM.md
+  https://raw.githubusercontent.com/petrinhu/rag_maker/main/AGENTS.md
   ```
 
 Instrução padrão para colar no prompt do agente:
 
-> "Antes de invocar a CLI `rag`, leia o contrato em https://raw.githubusercontent.com/petrinhu/rag_maker/main/LLM.md e siga as regras documentadas (schema JSON, exit codes, workflow recomendado)."
+> "Antes de invocar a CLI `rag`, leia o contrato em https://raw.githubusercontent.com/petrinhu/rag_maker/main/AGENTS.md e siga as regras documentadas (schema JSON, exit codes, workflow recomendado)."
 
 ---
 
@@ -424,9 +424,9 @@ Workers in `QThread`: UI never blocks.
 
 ---
 
-## `LLM.md`: Contract for external AIs
+## `AGENTS.md`: Contract for external AIs
 
-The `LLM.md` file at repo root is a **formal contract** that instructs LLM agents (Claude Code, ChatGPT, Gemini, etc.) on how to invoke the `rag` CLI and interpret results.
+The `AGENTS.md` file at repo root is a **formal contract** that instructs LLM agents (Claude Code, ChatGPT, Gemini, etc.) on how to invoke the `rag` CLI and interpret results.
 
 It contains:
 
@@ -437,19 +437,19 @@ It contains:
 - Explicit list of what **not to do** (infer content not returned, fabricate references, ignore exit codes).
 - Error codes and how to react.
 
-Agents should read `LLM.md` before first use and respect the documented contracts.
+Agents should read `AGENTS.md` before first use and respect the documented contracts.
 
-**Where to find `LLM.md`:**
+**Where to find `AGENTS.md`:**
 
-- Repo clone: `./LLM.md` at root.
+- Repo clone: `./AGENTS.md` at root.
 - Installed via `uv tool install` or `pipx install`: file is not bundled in the wheel. Point the agent at the canonical URL:
   ```
-  https://raw.githubusercontent.com/petrinhu/rag_maker/main/LLM.md
+  https://raw.githubusercontent.com/petrinhu/rag_maker/main/AGENTS.md
   ```
 
 Standard instruction to paste into the agent prompt:
 
-> "Before invoking the `rag` CLI, read the contract at https://raw.githubusercontent.com/petrinhu/rag_maker/main/LLM.md and follow the documented rules (JSON schema, exit codes, recommended workflow)."
+> "Before invoking the `rag` CLI, read the contract at https://raw.githubusercontent.com/petrinhu/rag_maker/main/AGENTS.md and follow the documented rules (JSON schema, exit codes, recommended workflow)."
 
 ---
 

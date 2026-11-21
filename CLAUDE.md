@@ -6,7 +6,7 @@ Ferramenta de recuperação (retrieval-only) offline para construção de biblio
 
 - **Único modelo local**: `bge-m3:latest` via Ollama (apenas embeddings, dim=1024).
 - **Sem LLM local para síntese** — o consumidor externo (IA) é quem redige.
-- **LLM.md é o contrato formal** que instrui IAs externas a chamar a CLI e interpretar as respostas.
+- **AGENTS.md é o contrato formal** que instrui IAs externas a chamar a CLI e interpretar as respostas.
 
 ## Estrutura
 
